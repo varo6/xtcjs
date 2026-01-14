@@ -1,52 +1,56 @@
-// Manga Viewer Module
-const $ = (id) => document.getElementById(id);
+// Manga Viewer component
 
-let pages = [];
+import { $ } from '../utils/dom';
+
+let pages: string[] = [];
 let currentIndex = 0;
 let isRotated = false;
 
-const viewerSection = $('viewer');
-const viewerTrack = $('viewerTrack');
-const thumbnailTrack = $('thumbnailTrack');
-const pageIndicator = $('pageIndicator');
-const prevBtn = $('viewerPrev');
-const nextBtn = $('viewerNext');
-const closeBtn = $('viewerClose');
-const rotateBtn = $('viewerRotate');
+export function initViewer(): void {
+  const prevBtn = $('viewerPrev');
+  const nextBtn = $('viewerNext');
+  const closeBtn = $('viewerClose');
+  const rotateBtn = $('viewerRotate');
 
-// Event listeners
-prevBtn.addEventListener('click', () => goToPage(currentIndex - 1));
-nextBtn.addEventListener('click', () => goToPage(currentIndex + 1));
-closeBtn.addEventListener('click', closeViewer);
-rotateBtn.addEventListener('click', toggleRotate);
+  prevBtn.addEventListener('click', () => goToPage(currentIndex - 1));
+  nextBtn.addEventListener('click', () => goToPage(currentIndex + 1));
+  closeBtn.addEventListener('click', closeViewer);
+  rotateBtn.addEventListener('click', toggleRotate);
 
-// Keyboard navigation
-document.addEventListener('keydown', (e) => {
-  if (viewerSection.classList.contains('hidden')) return;
+  // Keyboard navigation
+  document.addEventListener('keydown', (e) => {
+    const viewerSection = $('viewer');
+    if (viewerSection.classList.contains('hidden')) return;
 
-  switch (e.key) {
-    case 'ArrowLeft':
-      goToPage(currentIndex - 1);
-      break;
-    case 'ArrowRight':
-      goToPage(currentIndex + 1);
-      break;
-    case 'Escape':
-      closeViewer();
-      break;
-    case 'r':
-    case 'R':
-      toggleRotate();
-      break;
-  }
-});
+    switch (e.key) {
+      case 'ArrowLeft':
+        goToPage(currentIndex - 1);
+        break;
+      case 'ArrowRight':
+        goToPage(currentIndex + 1);
+        break;
+      case 'Escape':
+        closeViewer();
+        break;
+      case 'r':
+      case 'R':
+        toggleRotate();
+        break;
+    }
+  });
+}
 
-function toggleRotate() {
+function toggleRotate(): void {
+  const viewerSection = $('viewer');
   isRotated = !isRotated;
   viewerSection.classList.toggle('rotated', isRotated);
 }
 
-export function openViewer(pageImages) {
+export function openViewer(pageImages: string[]): void {
+  const viewerSection = $('viewer');
+  const viewerTrack = $('viewerTrack');
+  const thumbnailTrack = $('thumbnailTrack');
+
   pages = pageImages;
   currentIndex = 0;
   isRotated = false;
@@ -69,7 +73,8 @@ export function openViewer(pageImages) {
   // Thumbnail click handlers
   thumbnailTrack.querySelectorAll('.thumbnail').forEach(thumb => {
     thumb.addEventListener('click', () => {
-      goToPage(parseInt(thumb.dataset.index));
+      const index = parseInt((thumb as HTMLElement).dataset.index || '0');
+      goToPage(index);
     });
   });
 
@@ -80,7 +85,8 @@ export function openViewer(pageImages) {
   viewerSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-export function closeViewer() {
+export function closeViewer(): void {
+  const viewerSection = $('viewer');
   viewerSection.classList.add('hidden');
   viewerSection.classList.remove('rotated');
   pages = [];
@@ -88,13 +94,19 @@ export function closeViewer() {
   isRotated = false;
 }
 
-function goToPage(index) {
+function goToPage(index: number): void {
   if (index < 0 || index >= pages.length) return;
   currentIndex = index;
   updateView();
 }
 
-function updateView() {
+function updateView(): void {
+  const viewerTrack = $('viewerTrack');
+  const thumbnailTrack = $('thumbnailTrack');
+  const pageIndicator = $('pageIndicator');
+  const prevBtn = $('viewerPrev') as HTMLButtonElement;
+  const nextBtn = $('viewerNext') as HTMLButtonElement;
+
   // Update track position
   viewerTrack.style.transform = `translateX(-${currentIndex * 100}%)`;
 
