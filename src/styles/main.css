@@ -106,22 +106,22 @@ body {
   letter-spacing: -0.03em;
   line-height: 1;
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: center;
-  gap: var(--space-sm);
-}
-
-.logo-cbz {
-  color: var(--ink-light);
-}
-
-.logo-arrow {
-  font-weight: 400;
-  color: var(--accent);
 }
 
 .logo-xtc {
   color: var(--ink);
+}
+
+.logo-dot {
+  color: var(--accent);
+  font-size: 1.3em;
+  line-height: 0;
+}
+
+.logo-js {
+  color: var(--ink-light);
 }
 
 .tagline {
