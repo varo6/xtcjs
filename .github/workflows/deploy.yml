@@ -21,16 +21,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Build
-        run: bun run build
+      - name: Create redirect site
+        run: |
+          mkdir -p dist
+          cat > dist/index.html <<'EOF'
+          <!doctype html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8">
+              <meta http-equiv="refresh" content="0; url=https://xtcjs.app/">
+              <link rel="canonical" href="https://xtcjs.app/">
+              <title>Redirecting...</title>
+              <script>
+                (function () {
+                  var target = "https://xtcjs.app" + window.location.pathname + window.location.search + window.location.hash;
+                  window.location.replace(target);
+                })();
+              </script>
+            </head>
+            <body>
+              <p>Redirecting to <a href="https://xtcjs.app/">xtcjs.app</a>...</p>
+            </body>
+          </html>
+          EOF
+          cp dist/index.html dist/404.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

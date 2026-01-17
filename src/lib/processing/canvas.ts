@@ -1,16 +1,13 @@
 // Canvas utility functions for rotation and resizing
 
 // Target dimensions for XTEink X4
-const TARGET_WIDTH = 480;
-const TARGET_HEIGHT = 800;
+export const TARGET_WIDTH = 480;
+export const TARGET_HEIGHT = 800;
 
 /**
  * Rotate canvas by specified degrees
- * @param {HTMLCanvasElement} canvas - Source canvas
- * @param {number} degrees - Rotation angle (90, -90, 180, etc.)
- * @returns {HTMLCanvasElement} Rotated canvas
  */
-export function rotateCanvas(canvas, degrees) {
+export function rotateCanvas(canvas: HTMLCanvasElement, degrees: number): HTMLCanvasElement {
   const rotated = document.createElement('canvas');
 
   if (degrees === -90 || degrees === 90) {
@@ -21,7 +18,7 @@ export function rotateCanvas(canvas, degrees) {
     rotated.height = canvas.height;
   }
 
-  const ctx = rotated.getContext('2d');
+  const ctx = rotated.getContext('2d')!;
   ctx.translate(rotated.width / 2, rotated.height / 2);
   ctx.rotate(degrees * Math.PI / 180);
   ctx.drawImage(canvas, -canvas.width / 2, -canvas.height / 2);
@@ -31,18 +28,18 @@ export function rotateCanvas(canvas, degrees) {
 
 /**
  * Extract a region from canvas and rotate it
- * @param {HTMLCanvasElement} srcCanvas - Source canvas
- * @param {number} x - X coordinate
- * @param {number} y - Y coordinate
- * @param {number} w - Width
- * @param {number} h - Height
- * @returns {HTMLCanvasElement} Extracted and rotated canvas
  */
-export function extractAndRotate(srcCanvas, x, y, w, h) {
+export function extractAndRotate(
+  srcCanvas: HTMLCanvasElement,
+  x: number,
+  y: number,
+  w: number,
+  h: number
+): HTMLCanvasElement {
   const extractCanvas = document.createElement('canvas');
   extractCanvas.width = w;
   extractCanvas.height = h;
-  const ctx = extractCanvas.getContext('2d');
+  const ctx = extractCanvas.getContext('2d')!;
   ctx.drawImage(srcCanvas, x, y, w, h, 0, 0, w, h);
 
   return rotateCanvas(extractCanvas, 90);
@@ -50,15 +47,12 @@ export function extractAndRotate(srcCanvas, x, y, w, h) {
 
 /**
  * Resize canvas with padding to fit target dimensions
- * @param {HTMLCanvasElement} canvas - Source canvas
- * @param {number} padColor - Padding color (0-255, default white)
- * @returns {HTMLCanvasElement} Resized canvas with padding
  */
-export function resizeWithPadding(canvas, padColor = 255) {
+export function resizeWithPadding(canvas: HTMLCanvasElement, padColor = 255): HTMLCanvasElement {
   const result = document.createElement('canvas');
   result.width = TARGET_WIDTH;
   result.height = TARGET_HEIGHT;
-  const ctx = result.getContext('2d');
+  const ctx = result.getContext('2d')!;
 
   // Fill with padding color (white by default)
   ctx.fillStyle = `rgb(${padColor}, ${padColor}, ${padColor})`;
@@ -77,6 +71,3 @@ export function resizeWithPadding(canvas, padColor = 255) {
 
   return result;
 }
-
-// Export constants
-export { TARGET_WIDTH, TARGET_HEIGHT };

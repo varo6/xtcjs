@@ -2,11 +2,12 @@
 
 /**
  * Convert image to grayscale using luminosity method
- * @param {CanvasRenderingContext2D} ctx - Canvas context
- * @param {number} width - Canvas width
- * @param {number} height - Canvas height
  */
-export function toGrayscale(ctx, width, height) {
+export function toGrayscale(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number
+): void {
   const imageData = ctx.getImageData(0, 0, width, height);
   const data = imageData.data;
 
@@ -21,12 +22,13 @@ export function toGrayscale(ctx, width, height) {
 
 /**
  * Apply contrast boost to improve manga readability
- * @param {CanvasRenderingContext2D} ctx - Canvas context
- * @param {number} width - Canvas width
- * @param {number} height - Canvas height
- * @param {number} level - Contrast level (0-8, 4 is default)
  */
-export function applyContrast(ctx, width, height, level) {
+export function applyContrast(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  level: number
+): void {
   const blackCutoff = 3 * level;
   const whiteCutoff = 3 + 9 * level;
 
@@ -83,11 +85,11 @@ export function applyContrast(ctx, width, height, level) {
 
 /**
  * Calculate overlapping segments for tall manga pages
- * @param {number} width - Image width
- * @param {number} height - Image height
- * @returns {Array} Array of segment coordinates {x, y, w, h}
  */
-export function calculateOverlapSegments(width, height) {
+export function calculateOverlapSegments(
+  width: number,
+  height: number
+): Array<{ x: number; y: number; w: number; h: number }> {
   const scale = 800 / width;
   const segmentHeight = Math.floor(480 / scale);
 

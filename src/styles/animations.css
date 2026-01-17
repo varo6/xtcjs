@@ -71,7 +71,7 @@
 }
 
 /* Processing indicator */
-.progress-section.processing #progressText::after {
+.progress-section.processing .progress-text::after {
   content: '';
   animation: pulse 1.5s ease-in-out infinite;
 }

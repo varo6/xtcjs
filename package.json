@@ -1,22 +1,31 @@
 {
-  "name": "cbz2xtc-frontend",
+  "name": "xtcjs",
   "version": "1.0.0",
   "description": "Browser-based CBZ to XTC converter for XTEink X4",
-  "module": "index.ts",
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun run index.ts",
-    "start": "bun run index.ts",
-    "build": "bun run build.ts"
-  },
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "serve": "bun run server/index.ts"
   },
   "dependencies": {
-    "jszip": "^3.10.1"
+    "@hono/vite-dev-server": "^0.24.1",
+    "@tanstack/react-router": "^1.151.0",
+    "hono": "^4.11.4",
+    "jszip": "^3.10.1",
+    "pdfjs-dist": "^5.4.530",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  },
+  "devDependencies": {
+    "@tanstack/router-plugin": "^1.151.0",
+    "@types/bun": "latest",
+    "@types/react": "^19.2.8",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.2",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1"
   }
 }

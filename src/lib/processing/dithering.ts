@@ -3,12 +3,13 @@
 
 /**
  * Applies the selected dithering algorithm to canvas
- * @param {CanvasRenderingContext2D} ctx - Canvas context
- * @param {number} width - Canvas width
- * @param {number} height - Canvas height
- * @param {string} algorithm - Algorithm name
  */
-export function applyDithering(ctx, width, height, algorithm) {
+export function applyDithering(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  algorithm: string
+): void {
   const imageData = ctx.getImageData(0, 0, width, height);
   const data = imageData.data;
 
@@ -38,7 +39,7 @@ export function applyDithering(ctx, width, height, algorithm) {
 /**
  * Simple threshold - no dithering
  */
-function applyThreshold(data) {
+function applyThreshold(data: Uint8ClampedArray): void {
   for (let i = 0; i < data.length; i += 4) {
     const val = data[i] >= 128 ? 255 : 0;
     data[i] = data[i + 1] = data[i + 2] = val;
@@ -53,7 +54,7 @@ function applyThreshold(data) {
  *     1   1
  * Divider: 4
  */
-function applySierraLite(data, width, height) {
+function applySierraLite(data: Uint8ClampedArray, width: number, height: number): void {
   const pixels = new Float32Array(width * height);
   for (let i = 0; i < pixels.length; i++) {
     pixels[i] = data[i * 4];
@@ -87,7 +88,7 @@ function applySierraLite(data, width, height) {
  * Creates lighter images, good for preventing dark pages
  * Only distributes 75% of error (6/8)
  */
-function applyAtkinson(data, width, height) {
+function applyAtkinson(data: Uint8ClampedArray, width: number, height: number): void {
   const pixels = new Float32Array(width * height);
   for (let i = 0; i < pixels.length; i++) {
     pixels[i] = data[i * 4];
@@ -124,7 +125,7 @@ function applyAtkinson(data, width, height) {
  * Floyd-Steinberg dithering
  * The classic algorithm, good balance
  */
-function applyFloydSteinberg(data, width, height) {
+function applyFloydSteinberg(data: Uint8ClampedArray, width: number, height: number): void {
   const pixels = new Float32Array(width * height);
   for (let i = 0; i < pixels.length; i++) {
     pixels[i] = data[i * 4];
@@ -157,7 +158,7 @@ function applyFloydSteinberg(data, width, height) {
  * Ordered/Bayer dithering
  * Creates regular patterns
  */
-function applyOrdered(data, width, height) {
+function applyOrdered(data: Uint8ClampedArray, width: number, height: number): void {
   const bayer = [
     [0, 8, 2, 10],
     [12, 4, 14, 6],
