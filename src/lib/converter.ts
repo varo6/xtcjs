@@ -5,7 +5,7 @@ import * as pdfjsLib from 'pdfjs-dist'
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { applyDithering } from './processing/dithering'
 import { toGrayscale, applyContrast, calculateOverlapSegments } from './processing/image'
-import { rotateCanvas, extractAndRotate, resizeWithPadding, TARGET_WIDTH, TARGET_HEIGHT } from './processing/canvas'
+import { rotateCanvas, extractAndRotate, extractRegion, resizeWithPadding, TARGET_WIDTH, TARGET_HEIGHT } from './processing/canvas'
 import { buildXtc } from './xtc-format'
 
 // Set up PDF.js worker from bundled asset
@@ -16,6 +16,7 @@ export interface ConversionOptions {
   dithering: string
   contrast: number
   margin: number
+  orientation: 'landscape' | 'portrait'
 }
 
 export interface ConversionResult {
@@ -211,6 +212,19 @@ function processCanvasAsImage(
 
   toGrayscale(ctx, width, height)
 
+  // Portrait mode: no rotation, 1 page = 1 page on e-reader
+  if (options.orientation === 'portrait') {
+    const finalCanvas = resizeWithPadding(canvas)
+    applyDithering(finalCanvas.getContext('2d')!, TARGET_WIDTH, TARGET_HEIGHT, options.dithering)
+
+    results.push({
+      name: `${String(pageNum).padStart(4, '0')}_0_page.png`,
+      canvas: finalCanvas
+    })
+    return results
+  }
+
+  // Landscape mode: rotate and optionally split
   const shouldSplit = width < height && options.splitMode !== 'nosplit'
 
   if (shouldSplit) {
@@ -343,6 +357,19 @@ function processLoadedImage(
   // Convert to grayscale
   toGrayscale(ctx, width, height)
 
+  // Portrait mode: no rotation, 1 page = 1 page on e-reader
+  if (options.orientation === 'portrait') {
+    const finalCanvas = resizeWithPadding(canvas)
+    applyDithering(finalCanvas.getContext('2d')!, TARGET_WIDTH, TARGET_HEIGHT, options.dithering)
+
+    results.push({
+      name: `${String(pageNum).padStart(4, '0')}_0_page.png`,
+      canvas: finalCanvas
+    })
+    return results
+  }
+
+  // Landscape mode: rotate and optionally split
   const shouldSplit = width < height && options.splitMode !== 'nosplit'
 
   if (shouldSplit) {

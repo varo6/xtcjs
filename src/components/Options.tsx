@@ -13,17 +13,31 @@ export function Options({ options, onChange }: OptionsProps) {
       </div>
 
       <div className="option">
-        <label htmlFor="splitMode">Page Split</label>
+        <label htmlFor="orientation">Orientation</label>
         <select
-          id="splitMode"
-          value={options.splitMode}
-          onChange={(e) => onChange({ ...options, splitMode: e.target.value })}
+          id="orientation"
+          value={options.orientation}
+          onChange={(e) => onChange({ ...options, orientation: e.target.value as 'landscape' | 'portrait' })}
         >
-          <option value="overlap">Overlapping thirds</option>
-          <option value="split">Split in half</option>
-          <option value="nosplit">No split</option>
+          <option value="landscape">Landscape</option>
+          <option value="portrait">Portrait</option>
         </select>
       </div>
+
+      {options.orientation === 'landscape' && (
+        <div className="option">
+          <label htmlFor="splitMode">Page Split</label>
+          <select
+            id="splitMode"
+            value={options.splitMode}
+            onChange={(e) => onChange({ ...options, splitMode: e.target.value })}
+          >
+            <option value="overlap">Overlapping thirds</option>
+            <option value="split">Split in half</option>
+            <option value="nosplit">No split</option>
+          </select>
+        </div>
+      )}
 
       <div className="option">
         <label htmlFor="dithering">Dithering</label>

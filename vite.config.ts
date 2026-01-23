@@ -22,4 +22,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
   },
+  ssr: {
+    external: ['bun:sqlite'],
+  },
 })

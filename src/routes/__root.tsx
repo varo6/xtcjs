@@ -38,7 +38,10 @@ function RootLayout() {
           <Link to="/pdf" className={`nav-tab${location.pathname === '/pdf' ? ' active' : ''}`}>
             PDF
           </Link>
-          <Link to="/feature3" className={`nav-tab${location.pathname === '/feature3' ? ' active' : ''}`}>
+          <Link to="/merge" className={`nav-tab${location.pathname === '/merge' ? ' active' : ''}`}>
+            Merge / Split
+          </Link>
+          <Link to="/feature4" className={`nav-tab${location.pathname === '/feature4' ? ' active' : ''}`}>
             Soon
           </Link>
         </nav>
@@ -46,10 +49,14 @@ function RootLayout() {
         <Outlet />
 
         <footer className="footer">
-          <p>All processing happens in your browser</p>
-          <a href="https://github.com/tazua/cbz2xtc" target="_blank" rel="noopener">
-            Based on cbz2xtc
-          </a>
+          <p>All processing happens in your browser · Your files never leave your device</p>
+          <div className="footer-links">
+            <a href="https://github.com/varo6/xtcjs" target="_blank" rel="noopener">GitHub</a>
+            <span>·</span>
+            <Link to="/about">About</Link>
+            <span>·</span>
+            <a href="https://github.com/tazua/cbz2xtc" target="_blank" rel="noopener">Based on cbz2xtc</a>
+          </div>
         </footer>
       </main>
     </>

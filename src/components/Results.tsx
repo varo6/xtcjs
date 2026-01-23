@@ -1,13 +1,14 @@
 import { formatSize } from '../utils/format'
-import type { ConversionResult } from '../lib/converter'
+import type { StoredResult } from '../hooks/useStoredResults'
 
 interface ResultsProps {
-  results: ConversionResult[]
-  onDownload: (result: ConversionResult) => void
-  onPreview: (result: ConversionResult) => void
+  results: StoredResult[]
+  onDownload: (result: StoredResult) => void | Promise<void>
+  onPreview: (result: StoredResult) => void | Promise<void>
+  onClear?: () => void | Promise<void>
 }
 
-export function Results({ results, onDownload, onPreview }: ResultsProps) {
+export function Results({ results, onDownload, onPreview, onClear }: ResultsProps) {
   if (results.length === 0) {
     return null
   }
@@ -16,11 +17,16 @@ export function Results({ results, onDownload, onPreview }: ResultsProps) {
     <section className="results-section">
       <div className="section-header">
         <h2>Complete</h2>
+        {onClear && (
+          <button className="btn-clear-results" onClick={onClear}>
+            Clear Results
+          </button>
+        )}
       </div>
       <div className="results-grid">
-        {results.map((result, idx) => (
+        {results.map((result) => (
           <div
-            key={`${result.name}-${idx}`}
+            key={result.id}
             className={`result-item${result.error ? ' error' : ''}`}
           >
             <div>
@@ -54,18 +60,4 @@ export function Results({ results, onDownload, onPreview }: ResultsProps) {
       </div>
     </section>
   )
-}
-
-export function downloadResult(result: ConversionResult): void {
-  if (!result.data) return
-
-  const blob = new Blob([result.data], { type: 'application/octet-stream' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = result.name
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
 }

@@ -10,7 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PdfRouteImport } from './routes/pdf'
-import { Route as Feature3RouteImport } from './routes/feature3'
+import { Route as MergeRouteImport } from './routes/merge'
+import { Route as Feature4RouteImport } from './routes/feature4'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 
 const PdfRoute = PdfRouteImport.update({
@@ -18,9 +20,19 @@ const PdfRoute = PdfRouteImport.update({
   path: '/pdf',
   getParentRoute: () => rootRouteImport,
 } as any)
-const Feature3Route = Feature3RouteImport.update({
-  id: '/feature3',
-  path: '/feature3',
+const MergeRoute = MergeRouteImport.update({
+  id: '/merge',
+  path: '/merge',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Feature4Route = Feature4RouteImport.update({
+  id: '/feature4',
+  path: '/feature4',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -31,31 +43,39 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/feature3': typeof Feature3Route
+  '/about': typeof AboutRoute
+  '/feature4': typeof Feature4Route
+  '/merge': typeof MergeRoute
   '/pdf': typeof PdfRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/feature3': typeof Feature3Route
+  '/about': typeof AboutRoute
+  '/feature4': typeof Feature4Route
+  '/merge': typeof MergeRoute
   '/pdf': typeof PdfRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/feature3': typeof Feature3Route
+  '/about': typeof AboutRoute
+  '/feature4': typeof Feature4Route
+  '/merge': typeof MergeRoute
   '/pdf': typeof PdfRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/feature3' | '/pdf'
+  fullPaths: '/' | '/about' | '/feature4' | '/merge' | '/pdf'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/feature3' | '/pdf'
-  id: '__root__' | '/' | '/feature3' | '/pdf'
+  to: '/' | '/about' | '/feature4' | '/merge' | '/pdf'
+  id: '__root__' | '/' | '/about' | '/feature4' | '/merge' | '/pdf'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  Feature3Route: typeof Feature3Route
+  AboutRoute: typeof AboutRoute
+  Feature4Route: typeof Feature4Route
+  MergeRoute: typeof MergeRoute
   PdfRoute: typeof PdfRoute
 }
 
@@ -68,11 +88,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PdfRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/feature3': {
-      id: '/feature3'
-      path: '/feature3'
-      fullPath: '/feature3'
-      preLoaderRoute: typeof Feature3RouteImport
+    '/merge': {
+      id: '/merge'
+      path: '/merge'
+      fullPath: '/merge'
+      preLoaderRoute: typeof MergeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feature4': {
+      id: '/feature4'
+      path: '/feature4'
+      fullPath: '/feature4'
+      preLoaderRoute: typeof Feature4RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -87,7 +121,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  Feature3Route: Feature3Route,
+  AboutRoute: AboutRoute,
+  Feature4Route: Feature4Route,
+  MergeRoute: MergeRoute,
   PdfRoute: PdfRoute,
 }
 export const routeTree = rootRouteImport
