@@ -1,36 +1,38 @@
 // API client for communicating with Hono backend
 
-const API_BASE = '/api'
+// In production with separate API server, set VITE_API_URL=https://api.xtcjs.app/api
+const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
-export interface ConversionStats {
-  totalConversions: number
-  totalPages: number
-  totalBytes: number
-  lastConversion: string | null
-  conversionHistory: Array<{
-    timestamp: string
-    pageCount: number
-    fileSize: number
-  }>
+export interface DailyStats {
+  date: string
+  cbz_count: number
+  pdf_count: number
 }
 
-export async function getStats(): Promise<ConversionStats> {
-  const response = await fetch(`${API_BASE}/stats`)
+export interface Stats {
+  pending: { cbz: number; pdf: number }
+  totals: { cbz: number; pdf: number; total: number }
+  daily: DailyStats[]
+}
+
+export async function getStats(days = 30): Promise<Stats> {
+  const response = await fetch(`${API_BASE}/stats?days=${days}`)
   return response.json()
 }
 
-export async function recordConversion(data: {
-  pageCount: number
-  fileSize: number
-}): Promise<void> {
+export async function recordConversion(type: 'cbz' | 'pdf'): Promise<void> {
   await fetch(`${API_BASE}/stats/conversion`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
+    body: JSON.stringify({ type }),
   })
 }
 
-export async function healthCheck(): Promise<{ status: string; uptime: number }> {
+export async function healthCheck(): Promise<{
+  status: string
+  uptime: number
+  pending: { cbz: number; pdf: number }
+}> {
   const response = await fetch(`${API_BASE}/health`)
   return response.json()
 }

@@ -1,12 +1,14 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Dropzone } from './Dropzone'
 import { FileList } from './FileList'
 import { Options } from './Options'
 import { Progress } from './Progress'
-import { Results, downloadResult } from './Results'
+import { Results } from './Results'
 import { Viewer } from './Viewer'
-import { convertToXtc, type ConversionOptions, type ConversionResult } from '../lib/converter'
+import { convertToXtc, type ConversionOptions } from '../lib/converter'
 import { recordConversion } from '../lib/api'
+import { consumePendingFiles } from '../lib/file-transfer'
+import { useStoredResults, type StoredResult } from '../hooks/useStoredResults'
 
 interface ConverterPageProps {
   fileType: 'cbz' | 'pdf'
@@ -15,7 +17,40 @@ interface ConverterPageProps {
 
 export function ConverterPage({ fileType, notice }: ConverterPageProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
-  const [results, setResults] = useState<ConversionResult[]>([])
+  const [transferNotice, setTransferNotice] = useState<string | null>(null)
+
+  // Use IndexedDB-backed storage for results
+  const {
+    results,
+    recoveredResults,
+    recoveredCount,
+    addResult,
+    clearSession,
+    clearAll,
+    dismissRecovered,
+    downloadResult,
+    getPreviewImages,
+  } = useStoredResults()
+
+  // Check for transferred files on mount
+  useEffect(() => {
+    const pending = consumePendingFiles()
+    if (pending.length > 0) {
+      // Filter files matching this converter's type
+      const matchingFiles = pending.filter(f =>
+        f.name.toLowerCase().endsWith(`.${fileType}`)
+      )
+      if (matchingFiles.length > 0) {
+        setSelectedFiles(matchingFiles)
+        setTransferNotice(
+          `${matchingFiles.length} file${matchingFiles.length > 1 ? 's' : ''} received from merge/split`
+        )
+        // Clear notice after 5 seconds
+        setTimeout(() => setTransferNotice(null), 5000)
+      }
+    }
+  }, [fileType])
+
   const [isConverting, setIsConverting] = useState(false)
   const [progress, setProgress] = useState(0)
   const [progressText, setProgressText] = useState('Processing...')
@@ -26,6 +61,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     dithering: fileType === 'pdf' ? 'atkinson' : 'floyd',
     contrast: fileType === 'pdf' ? 8 : 4,
     margin: 0,
+    orientation: 'landscape',
   })
 
   const handleFiles = useCallback((files: File[]) => {
@@ -40,12 +76,10 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     if (selectedFiles.length === 0) return
 
     setIsConverting(true)
-    setResults([])
+    await clearSession() // Clear previous session results
     setProgress(0)
     setProgressText('Processing...')
     setPreviewUrl(null)
-
-    const newResults: ConversionResult[] = []
 
     for (let i = 0; i < selectedFiles.length; i++) {
       const file = selectedFiles[i]
@@ -57,17 +91,15 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
           setProgress((i + pageProgress) / selectedFiles.length)
           if (preview) setPreviewUrl(preview)
         })
-        newResults.push(result)
 
-        if (result.pageCount && result.size) {
-          recordConversion({
-            pageCount: result.pageCount,
-            fileSize: result.size,
-          }).catch(() => {})
-        }
+        // Store result immediately - progressive display
+        await addResult(result)
+
+        recordConversion(fileType).catch(() => {})
       } catch (err) {
         console.error(`Error converting ${file.name}:`, err)
-        newResults.push({
+        // Store error result
+        await addResult({
           name: file.name.replace(/\.(cbz|pdf)$/i, '.xtc'),
           error: err instanceof Error ? err.message : 'Unknown error',
         })
@@ -78,24 +110,61 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     setProgressText('Complete')
     setPreviewUrl(null)
     setIsConverting(false)
-    setResults(newResults)
-  }, [selectedFiles, fileType, options])
+  }, [selectedFiles, fileType, options, addResult, clearSession])
 
-  const handlePreview = useCallback((result: ConversionResult) => {
-    if (result.pageImages) {
-      setViewerPages(result.pageImages)
+  const handlePreview = useCallback(async (result: StoredResult) => {
+    const images = await getPreviewImages(result)
+    if (images.length > 0) {
+      setViewerPages(images)
     }
-  }, [])
+  }, [getPreviewImages])
 
   const handleCloseViewer = useCallback(() => {
     setViewerPages([])
   }, [])
+
+  const handleDownload = useCallback(async (result: StoredResult) => {
+    try {
+      await downloadResult(result)
+    } catch (err) {
+      console.error('Download failed:', err)
+    }
+  }, [downloadResult])
+
+  const handleClearResults = useCallback(async () => {
+    await clearSession()
+  }, [clearSession])
+
+  // Combine current and recovered results for display
+  const allResults = [...recoveredResults, ...results]
 
   return (
     <>
       {notice && (
         <div className="converter-notice">
           <p>{notice}</p>
+        </div>
+      )}
+
+      {transferNotice && (
+        <div className="transfer-notice">
+          <p>{transferNotice}</p>
+        </div>
+      )}
+
+      {recoveredCount > 0 && (
+        <div className="recovered-notice">
+          <p>
+            Recovered {recoveredCount} file{recoveredCount > 1 ? 's' : ''} from previous session
+          </p>
+          <div className="recovered-actions">
+            <button onClick={dismissRecovered} className="btn-dismiss">
+              Dismiss
+            </button>
+            <button onClick={clearAll} className="btn-clear-all">
+              Clear All
+            </button>
+          </div>
         </div>
       )}
 
@@ -118,9 +187,10 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
       />
 
       <Results
-        results={results}
-        onDownload={downloadResult}
+        results={allResults}
+        onDownload={handleDownload}
         onPreview={handlePreview}
+        onClear={results.length > 0 ? handleClearResults : undefined}
       />
 
       <Viewer pages={viewerPages} onClose={handleCloseViewer} />

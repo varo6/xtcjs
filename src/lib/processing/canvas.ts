@@ -46,6 +46,25 @@ export function extractAndRotate(
 }
 
 /**
+ * Extract a region from canvas without rotation (for portrait mode)
+ */
+export function extractRegion(
+  srcCanvas: HTMLCanvasElement,
+  x: number,
+  y: number,
+  w: number,
+  h: number
+): HTMLCanvasElement {
+  const extractCanvas = document.createElement('canvas');
+  extractCanvas.width = w;
+  extractCanvas.height = h;
+  const ctx = extractCanvas.getContext('2d')!;
+  ctx.drawImage(srcCanvas, x, y, w, h, 0, 0, w, h);
+
+  return extractCanvas;
+}
+
+/**
  * Resize canvas with padding to fit target dimensions
  */
 export function resizeWithPadding(canvas: HTMLCanvasElement, padColor = 255): HTMLCanvasElement {

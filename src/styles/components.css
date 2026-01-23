@@ -539,3 +539,369 @@
   object-fit: contain;
   image-rendering: pixelated;
 }
+
+/* Mode Toggle */
+.mode-toggle {
+  display: flex;
+  gap: var(--space-xs);
+  justify-content: center;
+  padding: var(--space-sm);
+  background: var(--paper-dark);
+  border: var(--border-light);
+}
+
+.mode-toggle button {
+  flex: 1;
+  max-width: 150px;
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--paper);
+  border: var(--border);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mode-toggle button:hover:not(.active) {
+  background: var(--paper-dark);
+}
+
+.mode-toggle button.active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* Type Badge */
+.type-badge {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  background: var(--accent);
+  color: var(--paper);
+  padding: 0.15em 0.5em;
+  border-radius: 2px;
+  margin-left: auto;
+}
+
+/* Type Error */
+.type-error {
+  padding: var(--space-sm) var(--space-md);
+  background: var(--accent);
+  color: var(--paper);
+  margin-bottom: var(--space-md);
+}
+
+.type-error p {
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* Page Info */
+.page-info {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--ink-light);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--paper);
+  border: var(--border-light);
+  margin-top: var(--space-sm);
+}
+
+/* Help Text */
+.help-text {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--ink-faded);
+  margin-top: var(--space-xs);
+}
+
+/* Action Section */
+.action-section {
+  margin-top: var(--space-md);
+}
+
+.action-section .help-text {
+  text-align: center;
+  margin-top: var(--space-sm);
+}
+
+/* Download All */
+.download-all {
+  margin-top: var(--space-md);
+  text-align: center;
+}
+
+.btn-download-all {
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.btn-download-all:hover {
+  background: var(--accent);
+}
+
+/* Grid area for merge/split page - removed, now handled in main.css */
+
+/* Output Info */
+.output-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.output-format-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: var(--ink);
+  color: var(--paper);
+  padding: var(--space-sm);
+  text-align: center;
+}
+
+.output-hint {
+  font-size: 0.75rem;
+  color: var(--ink-faded);
+  font-style: italic;
+}
+
+/* Output Preview */
+.output-preview {
+  margin-top: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--paper);
+  border: var(--border-light);
+  font-size: 0.85rem;
+  color: var(--ink-light);
+}
+
+.output-preview strong {
+  color: var(--ink);
+}
+
+/* Results with Selection */
+.result-item {
+  position: relative;
+}
+
+.result-item.selected {
+  border-color: var(--accent);
+}
+
+.result-checkbox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.result-checkbox input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.result-checkbox .checkmark {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--ink-faded);
+  background: var(--paper);
+  transition: all 0.15s;
+}
+
+.result-checkbox input:checked + .checkmark {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.result-checkbox input:checked + .checkmark::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid var(--paper);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.result-checkbox:hover .checkmark {
+  border-color: var(--ink);
+}
+
+.result-info {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Select All Button */
+.btn-select-all {
+  margin-left: auto;
+  padding: var(--space-xs) var(--space-sm);
+  background: none;
+  border: var(--border-light);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--ink-faded);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-select-all:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+/* Results Actions */
+.results-actions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  flex-wrap: wrap;
+}
+
+/* Move to Converter Button */
+.btn-move-converter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--accent);
+  color: var(--paper);
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.btn-move-converter svg {
+  width: 16px;
+  height: 16px;
+}
+
+.btn-move-converter:hover {
+  background: var(--accent-hover);
+}
+
+/* Converter Hint */
+.converter-hint {
+  margin-top: var(--space-sm);
+  font-size: 0.8rem;
+  color: var(--ink-faded);
+  font-style: italic;
+}
+
+/* Transfer Notice */
+.transfer-notice {
+  grid-column: 1 / -1;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--accent);
+  color: var(--paper);
+  margin-bottom: calc(-1 * var(--space-md));
+  animation: fadeIn 0.3s ease;
+}
+
+.transfer-notice p {
+  font-size: 0.85rem;
+  margin: 0;
+  font-weight: 500;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Recovered Notice */
+.recovered-notice {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--ink);
+  color: var(--paper);
+  margin-bottom: calc(-1 * var(--space-md));
+  animation: fadeIn 0.3s ease;
+}
+
+.recovered-notice p {
+  font-size: 0.85rem;
+  margin: 0;
+  font-weight: 500;
+}
+
+.recovered-actions {
+  display: flex;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+}
+
+.btn-dismiss,
+.btn-clear-all {
+  padding: var(--space-xs) var(--space-sm);
+  background: transparent;
+  border: 1px solid var(--paper);
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-dismiss:hover {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.btn-clear-all {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-clear-all:hover {
+  background: var(--accent);
+  color: var(--paper);
+}
+
+/* Clear Results Button */
+.btn-clear-results {
+  margin-left: auto;
+  padding: var(--space-xs) var(--space-sm);
+  background: none;
+  border: var(--border-light);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--ink-faded);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-clear-results:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}

@@ -6,6 +6,10 @@ out
 dist
 *.tgz
 
+# runtime data
+data/*
+!data/.gitkeep
+
 # project docs
 CLAUDE.md
 
