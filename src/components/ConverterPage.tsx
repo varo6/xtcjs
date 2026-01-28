@@ -37,9 +37,14 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     const pending = consumePendingFiles()
     if (pending.length > 0) {
       // Filter files matching this converter's type
-      const matchingFiles = pending.filter(f =>
-        f.name.toLowerCase().endsWith(`.${fileType}`)
-      )
+      const matchingFiles = pending.filter(f => {
+        const name = f.name.toLowerCase()
+        if (fileType === 'pdf') {
+          return name.endsWith('.pdf')
+        }
+        // Accept both .cbz and .cbr for comic book type
+        return name.endsWith('.cbz') || name.endsWith('.cbr')
+      })
       if (matchingFiles.length > 0) {
         setSelectedFiles(matchingFiles)
         setTransferNotice(
@@ -87,7 +92,9 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
       setProgress(i / selectedFiles.length)
 
       try {
-        const result = await convertToXtc(file, fileType, options, (pageProgress, preview) => {
+        // Determine actual file type (cbz vs cbr)
+        const actualFileType = file.name.toLowerCase().endsWith('.cbr') ? 'cbr' : fileType
+        const result = await convertToXtc(file, actualFileType, options, (pageProgress, preview) => {
           setProgress((i + pageProgress) / selectedFiles.length)
           if (preview) setPreviewUrl(preview)
         })
@@ -100,7 +107,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
         console.error(`Error converting ${file.name}:`, err)
         // Store error result
         await addResult({
-          name: file.name.replace(/\.(cbz|pdf)$/i, '.xtc'),
+          name: file.name.replace(/\.(cbz|cbr|pdf)$/i, '.xtc'),
           error: err instanceof Error ? err.message : 'Unknown error',
         })
       }

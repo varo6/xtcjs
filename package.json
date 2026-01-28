@@ -17,6 +17,7 @@
     "@tanstack/react-router": "^1.153.2",
     "hono": "^4.11.4",
     "jszip": "^3.10.1",
+    "node-unrar-js": "^2.0.2",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^5.4.530",
     "react": "^19.2.3",

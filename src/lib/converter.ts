@@ -1,6 +1,8 @@
-// CBZ/PDF to XTC conversion logic
+// CBZ/CBR/PDF to XTC conversion logic
 
 import JSZip from 'jszip'
+import { createExtractorFromData } from 'node-unrar-js'
+import unrarWasm from 'node-unrar-js/esm/js/unrar.wasm?url'
 import * as pdfjsLib from 'pdfjs-dist'
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { applyDithering } from './processing/dithering'
@@ -34,16 +36,19 @@ interface ProcessedPage {
 }
 
 /**
- * Convert a file to XTC format (supports CBZ and PDF)
+ * Convert a file to XTC format (supports CBZ, CBR and PDF)
  */
 export async function convertToXtc(
   file: File,
-  fileType: 'cbz' | 'pdf',
+  fileType: 'cbz' | 'cbr' | 'pdf',
   options: ConversionOptions,
   onProgress: (progress: number, previewUrl: string | null) => void
 ): Promise<ConversionResult> {
   if (fileType === 'pdf') {
     return convertPdfToXtc(file, options, onProgress)
+  }
+  if (fileType === 'cbr') {
+    return convertCbrToXtc(file, options, onProgress)
   }
   return convertCbzToXtc(file, options, onProgress)
 }
@@ -101,6 +106,85 @@ export async function convertCbzToXtc(
 
   return {
     name: file.name.replace(/\.cbz$/i, '.xtc'),
+    data: xtcData,
+    size: xtcData.byteLength,
+    pageCount: processedPages.length,
+    pageImages
+  }
+}
+
+// Cache for loaded wasm binary
+let wasmBinaryCache: ArrayBuffer | null = null
+
+async function loadUnrarWasm(): Promise<ArrayBuffer> {
+  if (wasmBinaryCache) {
+    return wasmBinaryCache
+  }
+  const response = await fetch(unrarWasm)
+  wasmBinaryCache = await response.arrayBuffer()
+  return wasmBinaryCache
+}
+
+/**
+ * Convert a CBR file to XTC format
+ */
+export async function convertCbrToXtc(
+  file: File,
+  options: ConversionOptions,
+  onProgress: (progress: number, previewUrl: string | null) => void
+): Promise<ConversionResult> {
+  const wasmBinary = await loadUnrarWasm()
+  const arrayBuffer = await file.arrayBuffer()
+  const extractor = await createExtractorFromData({ data: arrayBuffer, wasmBinary })
+
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
+  const imageFiles: Array<{ path: string; data: Uint8Array }> = []
+
+  // Extract all files from the RAR archive
+  const { files } = extractor.extract()
+  for (const extractedFile of files) {
+    if (extractedFile.fileHeader.flags.directory) continue
+
+    const path = extractedFile.fileHeader.name
+    if (path.toLowerCase().startsWith('__macos')) continue
+
+    const ext = path.toLowerCase().substring(path.lastIndexOf('.'))
+    if (imageExtensions.includes(ext) && extractedFile.extraction) {
+      imageFiles.push({ path, data: extractedFile.extraction })
+    }
+  }
+
+  imageFiles.sort((a, b) => a.path.localeCompare(b.path))
+
+  if (imageFiles.length === 0) {
+    throw new Error('No images found in CBR')
+  }
+
+  const processedPages: ProcessedPage[] = []
+
+  for (let i = 0; i < imageFiles.length; i++) {
+    const imgFile = imageFiles[i]
+    // Create a copy of the data with a regular ArrayBuffer for Blob compatibility
+    const imgBlob = new Blob([new Uint8Array(imgFile.data)])
+
+    const pages = await processImage(imgBlob, i + 1, options)
+    processedPages.push(...pages)
+
+    if (pages.length > 0 && pages[0].canvas) {
+      const previewUrl = pages[0].canvas.toDataURL('image/png')
+      onProgress((i + 1) / imageFiles.length, previewUrl)
+    } else {
+      onProgress((i + 1) / imageFiles.length, null)
+    }
+  }
+
+  processedPages.sort((a, b) => a.name.localeCompare(b.name))
+
+  const pageImages = processedPages.map(page => page.canvas.toDataURL('image/png'))
+  const xtcData = await buildXtc(processedPages)
+
+  return {
+    name: file.name.replace(/\.cbr$/i, '.xtc'),
     data: xtcData,
     size: xtcData.byteLength,
     pageCount: processedPages.length,

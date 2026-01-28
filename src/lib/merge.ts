@@ -10,7 +10,7 @@ import { TARGET_WIDTH, TARGET_HEIGHT } from './processing/canvas'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
-export type FileType = 'cbz' | 'pdf' | 'xtc' | 'unknown'
+export type FileType = 'cbz' | 'cbr' | 'pdf' | 'xtc' | 'unknown'
 export type OutputFormat = 'xtc' | 'cbz' | 'pdf'
 
 export interface MergeResult {
@@ -37,6 +37,8 @@ export function detectFileType(file: File): FileType {
   switch (ext) {
     case 'cbz':
       return 'cbz'
+    case 'cbr':
+      return 'cbr'
     case 'pdf':
       return 'pdf'
     case 'xtc':

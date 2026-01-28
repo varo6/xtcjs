@@ -9,15 +9,21 @@ export function Dropzone({ onFiles, fileType = 'cbz' }: DropzoneProps) {
   const [isDragover, setIsDragover] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const extension = fileType === 'pdf' ? '.pdf' : '.cbz'
-  const accept = fileType === 'pdf' ? '.pdf,.PDF' : '.cbz,.CBZ'
-  const label = fileType === 'pdf' ? 'PDF' : 'CBZ'
+  const accept = fileType === 'pdf' ? '.pdf,.PDF' : '.cbz,.CBZ,.cbr,.CBR'
+  const label = fileType === 'pdf' ? 'PDF' : 'CBZ/CBR'
 
   const filterFiles = useCallback((files: FileList) => {
-    return Array.from(files).filter(f =>
-      f.name.toLowerCase().endsWith(extension)
-    )
-  }, [extension])
+    if (fileType === 'pdf') {
+      return Array.from(files).filter(f =>
+        f.name.toLowerCase().endsWith('.pdf')
+      )
+    }
+    // Accept both .cbz and .cbr for comic book type
+    return Array.from(files).filter(f => {
+      const name = f.name.toLowerCase()
+      return name.endsWith('.cbz') || name.endsWith('.cbr')
+    })
+  }, [fileType])
 
   const handleClick = useCallback(() => {
     fileInputRef.current?.click()

@@ -27,6 +27,9 @@ COPY --from=prerelease /usr/src/app/dist dist
 COPY --from=prerelease /usr/src/app/server server
 COPY --from=prerelease /usr/src/app/package.json .
 
+# create data directory for SQLite persistence
+RUN mkdir -p data && chown bun:bun data
+
 # run the app
 USER bun
 EXPOSE 3000/tcp
