@@ -9,6 +9,10 @@ import { applyDithering } from './processing/dithering'
 import { toGrayscale, applyContrast, calculateOverlapSegments } from './processing/image'
 import { rotateCanvas, extractAndRotate, extractRegion, resizeWithPadding, TARGET_WIDTH, TARGET_HEIGHT } from './processing/canvas'
 import { buildXtc } from './xtc-format'
+import { extractPdfMetadata } from './metadata/pdf-outline'
+import { parseComicInfo } from './metadata/comicinfo'
+import { PageMappingContext, adjustTocForMapping } from './page-mapping'
+import type { BookMetadata } from './metadata/types'
 
 // Set up PDF.js worker from bundled asset
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
@@ -65,6 +69,7 @@ export async function convertCbzToXtc(
 
   const imageFiles: Array<{ path: string; entry: any }> = []
   const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
+  let comicInfoEntry: any = null
 
   zip.forEach((relativePath: string, zipEntry: any) => {
     if (zipEntry.dir) return
@@ -74,6 +79,12 @@ export async function convertCbzToXtc(
     if (imageExtensions.includes(ext)) {
       imageFiles.push({ path: relativePath, entry: zipEntry })
     }
+
+    // Look for ComicInfo.xml
+    if (relativePath.toLowerCase() === 'comicinfo.xml' ||
+        relativePath.toLowerCase().endsWith('/comicinfo.xml')) {
+      comicInfoEntry = zipEntry
+    }
   })
 
   imageFiles.sort((a, b) => a.path.localeCompare(b.path))
@@ -82,7 +93,19 @@ export async function convertCbzToXtc(
     throw new Error('No images found in CBZ')
   }
 
+  // Extract metadata from ComicInfo.xml if present
+  let metadata: BookMetadata = { toc: [] }
+  if (comicInfoEntry) {
+    try {
+      const xmlContent = await comicInfoEntry.async('string')
+      metadata = parseComicInfo(xmlContent)
+    } catch {
+      // ComicInfo parsing failed, continue without metadata
+    }
+  }
+
   const processedPages: ProcessedPage[] = []
+  const mappingCtx = new PageMappingContext()
 
   for (let i = 0; i < imageFiles.length; i++) {
     const imgFile = imageFiles[i]
@@ -90,6 +113,9 @@ export async function convertCbzToXtc(
 
     const pages = await processImage(imgBlob, i + 1, options)
     processedPages.push(...pages)
+
+    // Track page mapping for TOC adjustment
+    mappingCtx.addOriginalPage(i + 1, pages.length)
 
     if (pages.length > 0 && pages[0].canvas) {
       const previewUrl = pages[0].canvas.toDataURL('image/png')
@@ -101,8 +127,13 @@ export async function convertCbzToXtc(
 
   processedPages.sort((a, b) => a.name.localeCompare(b.name))
 
+  // Adjust TOC page numbers based on mapping
+  if (metadata.toc.length > 0) {
+    metadata.toc = adjustTocForMapping(metadata.toc, mappingCtx)
+  }
+
   const pageImages = processedPages.map(page => page.canvas.toDataURL('image/png'))
-  const xtcData = await buildXtc(processedPages)
+  const xtcData = await buildXtc(processedPages, { metadata })
 
   return {
     name: file.name.replace(/\.cbz$/i, '.xtc'),
@@ -139,6 +170,7 @@ export async function convertCbrToXtc(
 
   const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
   const imageFiles: Array<{ path: string; data: Uint8Array }> = []
+  let comicInfoContent: string | null = null
 
   // Extract all files from the RAR archive
   const { files } = extractor.extract()
@@ -152,6 +184,14 @@ export async function convertCbrToXtc(
     if (imageExtensions.includes(ext) && extractedFile.extraction) {
       imageFiles.push({ path, data: extractedFile.extraction })
     }
+
+    // Look for ComicInfo.xml
+    if ((path.toLowerCase() === 'comicinfo.xml' ||
+         path.toLowerCase().endsWith('/comicinfo.xml')) &&
+        extractedFile.extraction) {
+      const decoder = new TextDecoder('utf-8')
+      comicInfoContent = decoder.decode(extractedFile.extraction)
+    }
   }
 
   imageFiles.sort((a, b) => a.path.localeCompare(b.path))
@@ -160,7 +200,18 @@ export async function convertCbrToXtc(
     throw new Error('No images found in CBR')
   }
 
+  // Extract metadata from ComicInfo.xml if present
+  let metadata: BookMetadata = { toc: [] }
+  if (comicInfoContent) {
+    try {
+      metadata = parseComicInfo(comicInfoContent)
+    } catch {
+      // ComicInfo parsing failed, continue without metadata
+    }
+  }
+
   const processedPages: ProcessedPage[] = []
+  const mappingCtx = new PageMappingContext()
 
   for (let i = 0; i < imageFiles.length; i++) {
     const imgFile = imageFiles[i]
@@ -169,6 +220,9 @@ export async function convertCbrToXtc(
 
     const pages = await processImage(imgBlob, i + 1, options)
     processedPages.push(...pages)
+
+    // Track page mapping for TOC adjustment
+    mappingCtx.addOriginalPage(i + 1, pages.length)
 
     if (pages.length > 0 && pages[0].canvas) {
       const previewUrl = pages[0].canvas.toDataURL('image/png')
@@ -180,8 +234,13 @@ export async function convertCbrToXtc(
 
   processedPages.sort((a, b) => a.name.localeCompare(b.name))
 
+  // Adjust TOC page numbers based on mapping
+  if (metadata.toc.length > 0) {
+    metadata.toc = adjustTocForMapping(metadata.toc, mappingCtx)
+  }
+
   const pageImages = processedPages.map(page => page.canvas.toDataURL('image/png'))
-  const xtcData = await buildXtc(processedPages)
+  const xtcData = await buildXtc(processedPages, { metadata })
 
   return {
     name: file.name.replace(/\.cbr$/i, '.xtc'),
@@ -203,7 +262,16 @@ async function convertPdfToXtc(
   const arrayBuffer = await file.arrayBuffer()
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
 
+  // Extract metadata (title, author, TOC) from PDF
+  let metadata: BookMetadata = { toc: [] }
+  try {
+    metadata = await extractPdfMetadata(pdf)
+  } catch {
+    // Metadata extraction failed, continue without it
+  }
+
   const processedPages: ProcessedPage[] = []
+  const mappingCtx = new PageMappingContext()
   const numPages = pdf.numPages
 
   for (let i = 1; i <= numPages; i++) {
@@ -224,6 +292,9 @@ async function convertPdfToXtc(
     const pages = processCanvasAsImage(canvas, i, options)
     processedPages.push(...pages)
 
+    // Track page mapping for TOC adjustment
+    mappingCtx.addOriginalPage(i, pages.length)
+
     if (pages.length > 0 && pages[0].canvas) {
       const previewUrl = pages[0].canvas.toDataURL('image/png')
       onProgress(i / numPages, previewUrl)
@@ -234,8 +305,13 @@ async function convertPdfToXtc(
 
   processedPages.sort((a, b) => a.name.localeCompare(b.name))
 
+  // Adjust TOC page numbers based on mapping
+  if (metadata.toc.length > 0) {
+    metadata.toc = adjustTocForMapping(metadata.toc, mappingCtx)
+  }
+
   const pageImages = processedPages.map(page => page.canvas.toDataURL('image/png'))
-  const xtcData = await buildXtc(processedPages)
+  const xtcData = await buildXtc(processedPages, { metadata })
 
   return {
     name: file.name.replace(/\.pdf$/i, '.xtc'),
