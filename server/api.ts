@@ -1,6 +1,11 @@
 import { Hono } from 'hono'
+import { cors } from 'hono/cors'
 
 const api = new Hono()
+
+api.use('*', cors({
+  origin: ['https://xtcjs.app', 'http://localhost:5173'],
+}))
 
 // Config
 const FLUSH_INTERVAL_MS = 60 * 60 * 1000 // 1 hour default

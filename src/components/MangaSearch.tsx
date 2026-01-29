@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import axios from 'axios'
+import { API_BASE } from '../lib/api'
 import '../styles/manga-search.css'
 
 interface NyaaResult {
@@ -15,7 +16,7 @@ interface NyaaResult {
 }
 
 function trackTorrentClick() {
-  axios.post('/api/stats/conversion', { type: 'torrent' }).catch(() => {})
+  axios.post(`${API_BASE}/stats/conversion`, { type: 'torrent' }).catch(() => {})
 }
 
 export function MangaSearch({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -34,9 +35,10 @@ export function MangaSearch({ open, onClose }: { open: boolean; onClose: () => v
     setLoading(true)
     setError('')
     try {
-      const { data } = await axios.get<NyaaResult[]>('/api/nyaa', {
+      const { data } = await axios.get(`${API_BASE}/nyaa`, {
         params: { q },
       })
+      if (!Array.isArray(data)) throw new Error('Invalid response')
       setResults(data)
     } catch {
       setError('Failed to fetch results')
