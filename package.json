@@ -14,19 +14,20 @@
   },
   "dependencies": {
     "@hono/vite-dev-server": "^0.24.1",
-    "@tanstack/react-router": "^1.153.2",
-    "hono": "^4.11.4",
+    "@tanstack/react-router": "^1.157.16",
+    "axios": "^1.13.4",
+    "hono": "^4.11.7",
     "jszip": "^3.10.1",
     "node-unrar-js": "^2.0.2",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^5.4.530",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3"
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
   },
   "devDependencies": {
-    "@tanstack/router-plugin": "^1.153.2",
+    "@tanstack/router-plugin": "^1.157.16",
     "@types/bun": "latest",
-    "@types/react": "^19.2.8",
+    "@types/react": "^19.2.10",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.2",
     "typescript": "^5.9.3",
