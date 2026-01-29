@@ -1,0 +1,8 @@
+name = "fancy-wave-31eb"
+compatibility_date = "2024-01-01"
+
+[assets]
+directory = "./dist"
+
+# SPA fallback - serve index.html for all routes not matching a file
+not_found_handling = "single-page-application"

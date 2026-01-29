@@ -1,4 +1,6 @@
 import { createRootRoute, Outlet, Link, useLocation } from '@tanstack/react-router'
+import { useState } from 'react'
+import { MangaSearch } from '../components/MangaSearch'
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -6,6 +8,7 @@ export const Route = createRootRoute({
 
 function RootLayout() {
   const location = useLocation()
+  const [searchOpen, setSearchOpen] = useState(false)
 
   return (
     <>
@@ -17,6 +20,17 @@ function RootLayout() {
             <span className="logo-dot">.</span>
             <span className="logo-js">js</span>
           </div>
+          <button
+            className="manga-search-trigger"
+            onClick={() => setSearchOpen(true)}
+            aria-label="Search manga"
+            title="Search manga on nyaa.si"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </button>
           <p className="tagline">
             Optimized XTC Tools for your <em>XTEink X4</em> · Support by starring on{' '}
             <a
@@ -59,6 +73,7 @@ function RootLayout() {
           </div>
         </footer>
       </main>
+      <MangaSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   )
 }
