@@ -21,7 +21,8 @@ export interface ConversionOptions {
   splitMode: string
   dithering: string
   contrast: number
-  margin: number
+  horizontalMargin: number
+  verticalMargin: number
   orientation: 'landscape' | 'portrait'
 }
 
@@ -37,6 +38,40 @@ export interface ConversionResult {
 interface ProcessedPage {
   name: string
   canvas: HTMLCanvasElement
+}
+
+interface CropRect {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+function clampMarginPercent(value: number): number {
+  if (!Number.isFinite(value)) return 0
+  return Math.max(0, Math.min(20, value))
+}
+
+function getAxisCropRect(
+  sourceWidth: number,
+  sourceHeight: number,
+  options: ConversionOptions
+): CropRect {
+  const horizontalMargin = clampMarginPercent(options.horizontalMargin)
+  const verticalMargin = clampMarginPercent(options.verticalMargin)
+
+  const maxCropX = Math.floor((sourceWidth - 1) / 2)
+  const maxCropY = Math.floor((sourceHeight - 1) / 2)
+
+  const cropX = Math.min(Math.floor(sourceWidth * horizontalMargin / 100), maxCropX)
+  const cropY = Math.min(Math.floor(sourceHeight * verticalMargin / 100), maxCropY)
+
+  return {
+    x: cropX,
+    y: cropY,
+    width: Math.max(1, sourceWidth - cropX * 2),
+    height: Math.max(1, sourceHeight - cropY * 2)
+  }
 }
 
 /**
@@ -334,37 +369,19 @@ function processCanvasAsImage(
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')!
 
-  let width = sourceCanvas.width
-  let height = sourceCanvas.height
+  const crop = getAxisCropRect(sourceCanvas.width, sourceCanvas.height, options)
+  canvas.width = crop.width
+  canvas.height = crop.height
+  ctx.drawImage(
+    sourceCanvas,
+    crop.x, crop.y,
+    crop.width, crop.height,
+    0, 0,
+    crop.width, crop.height
+  )
 
-  if (options.margin > 0) {
-    const marginPx = {
-      left: Math.floor(width * options.margin / 100),
-      top: Math.floor(height * options.margin / 100),
-      right: Math.floor(width * options.margin / 100),
-      bottom: Math.floor(height * options.margin / 100)
-    }
-
-    const croppedWidth = width - marginPx.left - marginPx.right
-    const croppedHeight = height - marginPx.top - marginPx.bottom
-
-    canvas.width = croppedWidth
-    canvas.height = croppedHeight
-    ctx.drawImage(
-      sourceCanvas,
-      marginPx.left, marginPx.top,
-      croppedWidth, croppedHeight,
-      0, 0,
-      croppedWidth, croppedHeight
-    )
-
-    width = croppedWidth
-    height = croppedHeight
-  } else {
-    canvas.width = width
-    canvas.height = height
-    ctx.drawImage(sourceCanvas, 0, 0)
-  }
+  let width = crop.width
+  let height = crop.height
 
   if (options.contrast > 0) {
     applyContrast(ctx, width, height, options.contrast)
@@ -472,42 +489,19 @@ function processLoadedImage(
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')!
 
-  let width = img.width
-  let height = img.height
+  const crop = getAxisCropRect(img.width, img.height, options)
+  canvas.width = crop.width
+  canvas.height = crop.height
+  ctx.drawImage(
+    img,
+    crop.x, crop.y,
+    crop.width, crop.height,
+    0, 0,
+    crop.width, crop.height
+  )
 
-  // Apply margin crop if configured
-  if (options.margin > 0) {
-    const marginPx = {
-      left: Math.floor(width * options.margin / 100),
-      top: Math.floor(height * options.margin / 100),
-      right: Math.floor(width * options.margin / 100),
-      bottom: Math.floor(height * options.margin / 100)
-    }
-
-    const croppedCanvas = document.createElement('canvas')
-    croppedCanvas.width = width - marginPx.left - marginPx.right
-    croppedCanvas.height = height - marginPx.top - marginPx.bottom
-    const croppedCtx = croppedCanvas.getContext('2d')!
-
-    croppedCtx.drawImage(
-      img,
-      marginPx.left, marginPx.top,
-      croppedCanvas.width, croppedCanvas.height,
-      0, 0,
-      croppedCanvas.width, croppedCanvas.height
-    )
-
-    width = croppedCanvas.width
-    height = croppedCanvas.height
-
-    canvas.width = width
-    canvas.height = height
-    ctx.drawImage(croppedCanvas, 0, 0)
-  } else {
-    canvas.width = width
-    canvas.height = height
-    ctx.drawImage(img, 0, 0)
-  }
+  let width = crop.width
+  let height = crop.height
 
   // Apply contrast enhancement
   if (options.contrast > 0) {

@@ -65,7 +65,8 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     splitMode: 'overlap',
     dithering: fileType === 'pdf' ? 'atkinson' : 'floyd',
     contrast: fileType === 'pdf' ? 8 : 4,
-    margin: 0,
+    horizontalMargin: 0,
+    verticalMargin: 0,
     orientation: 'landscape',
   })
 

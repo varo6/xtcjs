@@ -70,16 +70,32 @@ export function Options({ options, onChange }: OptionsProps) {
       </div>
 
       <div className="option">
-        <label htmlFor="margin">Margin crop</label>
+        <label htmlFor="horizontalMargin">Horizontal margin crop</label>
         <div className="input-with-unit">
           <input
             type="number"
-            id="margin"
+            id="horizontalMargin"
             min="0"
             max="20"
             step="0.5"
-            value={options.margin}
-            onChange={(e) => onChange({ ...options, margin: parseFloat(e.target.value) || 0 })}
+            value={options.horizontalMargin}
+            onChange={(e) => onChange({ ...options, horizontalMargin: parseFloat(e.target.value) || 0 })}
+          />
+          <span className="unit">%</span>
+        </div>
+      </div>
+
+      <div className="option">
+        <label htmlFor="verticalMargin">Vertical margin crop</label>
+        <div className="input-with-unit">
+          <input
+            type="number"
+            id="verticalMargin"
+            min="0"
+            max="20"
+            step="0.5"
+            value={options.verticalMargin}
+            onChange={(e) => onChange({ ...options, verticalMargin: parseFloat(e.target.value) || 0 })}
           />
           <span className="unit">%</span>
         </div>
