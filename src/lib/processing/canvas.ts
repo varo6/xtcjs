@@ -34,7 +34,8 @@ export function extractAndRotate(
   x: number,
   y: number,
   w: number,
-  h: number
+  h: number,
+  degrees = 90
 ): HTMLCanvasElement {
   const extractCanvas = document.createElement('canvas');
   extractCanvas.width = w;
@@ -42,7 +43,7 @@ export function extractAndRotate(
   const ctx = extractCanvas.getContext('2d')!;
   ctx.drawImage(srcCanvas, x, y, w, h, 0, 0, w, h);
 
-  return rotateCanvas(extractCanvas, 90);
+  return rotateCanvas(extractCanvas, degrees);
 }
 
 /**

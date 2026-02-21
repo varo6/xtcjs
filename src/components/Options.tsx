@@ -25,18 +25,32 @@ export function Options({ options, onChange }: OptionsProps) {
       </div>
 
       {options.orientation === 'landscape' && (
-        <div className="option">
-          <label htmlFor="splitMode">Page Split</label>
-          <select
-            id="splitMode"
-            value={options.splitMode}
-            onChange={(e) => onChange({ ...options, splitMode: e.target.value })}
-          >
-            <option value="overlap">Overlapping thirds</option>
-            <option value="split">Split in half</option>
-            <option value="nosplit">No split</option>
-          </select>
-        </div>
+        <>
+          <div className="option option-checkbox">
+            <label htmlFor="landscapeFlipClockwise" className="checkbox-label">
+              <input
+                type="checkbox"
+                id="landscapeFlipClockwise"
+                checked={options.landscapeFlipClockwise}
+                onChange={(e) => onChange({ ...options, landscapeFlipClockwise: e.target.checked })}
+              />
+              <span>Flip landscape clockwise</span>
+            </label>
+          </div>
+
+          <div className="option">
+            <label htmlFor="splitMode">Page Split</label>
+            <select
+              id="splitMode"
+              value={options.splitMode}
+              onChange={(e) => onChange({ ...options, splitMode: e.target.value })}
+            >
+              <option value="overlap">Overlapping thirds</option>
+              <option value="split">Split in half</option>
+              <option value="nosplit">No split</option>
+            </select>
+          </div>
+        </>
       )}
 
       <div className="option">

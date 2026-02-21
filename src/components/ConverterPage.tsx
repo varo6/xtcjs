@@ -68,6 +68,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     horizontalMargin: 0,
     verticalMargin: 0,
     orientation: 'landscape',
+    landscapeFlipClockwise: false,
   })
 
   const handleFiles = useCallback((files: File[]) => {

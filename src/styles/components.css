@@ -103,7 +103,7 @@
 }
 
 .option select,
-.option input {
+.option input:not([type="checkbox"]) {
   width: 100%;
   padding: var(--space-sm) var(--space-sm);
   font-family: var(--font-mono);
@@ -116,14 +116,40 @@
 }
 
 .option select:hover,
-.option input:hover {
+.option input:not([type="checkbox"]):hover {
   background: #fff;
 }
 
 .option select:focus,
-.option input:focus {
+.option input:not([type="checkbox"]):focus {
   outline: 2px solid var(--ink);
   outline-offset: 1px;
+}
+
+.option-checkbox .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: 0;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+.option-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--ink);
+  cursor: pointer;
+}
+
+.option-checkbox input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }
 
 .input-with-unit {

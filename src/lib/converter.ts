@@ -24,6 +24,7 @@ export interface ConversionOptions {
   horizontalMargin: number
   verticalMargin: number
   orientation: 'landscape' | 'portrait'
+  landscapeFlipClockwise: boolean
 }
 
 export interface ConversionResult {
@@ -402,6 +403,7 @@ function processCanvasAsImage(
   }
 
   // Landscape mode: rotate and optionally split
+  const landscapeRotation = options.landscapeFlipClockwise ? -90 : 90
   const shouldSplit = width < height && options.splitMode !== 'nosplit'
 
   if (shouldSplit) {
@@ -409,7 +411,7 @@ function processCanvasAsImage(
       const segments = calculateOverlapSegments(width, height)
       segments.forEach((seg, idx) => {
         const letter = String.fromCharCode(97 + idx)
-        const pageCanvas = extractAndRotate(canvas, seg.x, seg.y, seg.w, seg.h)
+        const pageCanvas = extractAndRotate(canvas, seg.x, seg.y, seg.w, seg.h, landscapeRotation)
         const finalCanvas = resizeWithPadding(pageCanvas)
         applyDithering(finalCanvas.getContext('2d')!, TARGET_WIDTH, TARGET_HEIGHT, options.dithering)
 
@@ -421,7 +423,7 @@ function processCanvasAsImage(
     } else {
       const halfHeight = Math.floor(height / 2)
 
-      const topCanvas = extractAndRotate(canvas, 0, 0, width, halfHeight)
+      const topCanvas = extractAndRotate(canvas, 0, 0, width, halfHeight, landscapeRotation)
       const topFinal = resizeWithPadding(topCanvas)
       applyDithering(topFinal.getContext('2d')!, TARGET_WIDTH, TARGET_HEIGHT, options.dithering)
       results.push({
@@ -429,7 +431,7 @@ function processCanvasAsImage(
         canvas: topFinal
       })
 
-      const bottomCanvas = extractAndRotate(canvas, 0, halfHeight, width, halfHeight)
+      const bottomCanvas = extractAndRotate(canvas, 0, halfHeight, width, halfHeight, landscapeRotation)
       const bottomFinal = resizeWithPadding(bottomCanvas)
       applyDithering(bottomFinal.getContext('2d')!, TARGET_WIDTH, TARGET_HEIGHT, options.dithering)
       results.push({
@@ -438,7 +440,7 @@ function processCanvasAsImage(
       })
     }
   } else {
-    const rotatedCanvas = rotateCanvas(canvas, 90)
+    const rotatedCanvas = rotateCanvas(canvas, landscapeRotation)
     const finalCanvas = resizeWithPadding(rotatedCanvas)
     applyDithering(finalCanvas.getContext('2d')!, TARGET_WIDTH, TARGET_HEIGHT, options.dithering)
 
@@ -524,6 +526,7 @@ function processLoadedImage(
   }
 
   // Landscape mode: rotate and optionally split
+  const landscapeRotation = options.landscapeFlipClockwise ? -90 : 90
   const shouldSplit = width < height && options.splitMode !== 'nosplit'
 
   if (shouldSplit) {
@@ -531,7 +534,7 @@ function processLoadedImage(
       const segments = calculateOverlapSegments(width, height)
       segments.forEach((seg, idx) => {
         const letter = String.fromCharCode(97 + idx)
-        const pageCanvas = extractAndRotate(canvas, seg.x, seg.y, seg.w, seg.h)
+        const pageCanvas = extractAndRotate(canvas, seg.x, seg.y, seg.w, seg.h, landscapeRotation)
         const finalCanvas = resizeWithPadding(pageCanvas)
         applyDithering(finalCanvas.getContext('2d')!, TARGET_WIDTH, TARGET_HEIGHT, options.dithering)
 
@@ -543,7 +546,7 @@ function processLoadedImage(
     } else {
       const halfHeight = Math.floor(height / 2)
 
-      const topCanvas = extractAndRotate(canvas, 0, 0, width, halfHeight)
+      const topCanvas = extractAndRotate(canvas, 0, 0, width, halfHeight, landscapeRotation)
       const topFinal = resizeWithPadding(topCanvas)
       applyDithering(topFinal.getContext('2d')!, TARGET_WIDTH, TARGET_HEIGHT, options.dithering)
       results.push({
@@ -551,7 +554,7 @@ function processLoadedImage(
         canvas: topFinal
       })
 
-      const bottomCanvas = extractAndRotate(canvas, 0, halfHeight, width, halfHeight)
+      const bottomCanvas = extractAndRotate(canvas, 0, halfHeight, width, halfHeight, landscapeRotation)
       const bottomFinal = resizeWithPadding(bottomCanvas)
       applyDithering(bottomFinal.getContext('2d')!, TARGET_WIDTH, TARGET_HEIGHT, options.dithering)
       results.push({
@@ -560,7 +563,7 @@ function processLoadedImage(
       })
     }
   } else {
-    const rotatedCanvas = rotateCanvas(canvas, 90)
+    const rotatedCanvas = rotateCanvas(canvas, landscapeRotation)
     const finalCanvas = resizeWithPadding(rotatedCanvas)
     applyDithering(finalCanvas.getContext('2d')!, TARGET_WIDTH, TARGET_HEIGHT, options.dithering)
 
