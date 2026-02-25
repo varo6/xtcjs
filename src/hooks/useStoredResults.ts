@@ -13,7 +13,7 @@ import {
   getRecoveredConversionRefs,
   type StoredConversionRef,
 } from '../lib/storage'
-import type { ConversionResult } from '../lib/converter'
+import type { ConversionResult } from '../lib/conversion/types'
 
 export interface StoredResult extends StoredConversionRef {
   // For compatibility with ConversionResult interface used by Results component
@@ -30,6 +30,7 @@ interface UseStoredResultsReturn {
   dismissRecovered: () => void
   downloadResult: (result: StoredResult) => Promise<void>
   getPreviewImages: (result: StoredResult) => Promise<string[]>
+  getResultData: (result: StoredResult) => Promise<ArrayBuffer | null>
 }
 
 export function useStoredResults(): UseStoredResultsReturn {
@@ -180,6 +181,16 @@ export function useStoredResults(): UseStoredResultsReturn {
     }
   }, [])
 
+  const getResultData = useCallback(async (result: StoredResult): Promise<ArrayBuffer | null> => {
+    if (result.error) return null
+    try {
+      return await getConversionData(result.id)
+    } catch (err) {
+      console.error('Failed to get conversion data:', err)
+      return null
+    }
+  }, [])
+
   return {
     results,
     recoveredResults,
@@ -191,5 +202,6 @@ export function useStoredResults(): UseStoredResultsReturn {
     dismissRecovered,
     downloadResult,
     getPreviewImages,
+    getResultData,
   }
 }

@@ -1,14 +1,16 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { Dropzone } from './Dropzone'
 import { FileList } from './FileList'
 import { Options } from './Options'
 import { Progress } from './Progress'
 import { Results } from './Results'
 import { Viewer } from './Viewer'
-import { convertToXtc, type ConversionOptions } from '../lib/converter'
+import { convertToXtc } from '../lib/converter'
+import type { ConversionOptions } from '../lib/conversion/types'
 import { recordConversion } from '../lib/api'
 import { consumePendingFiles } from '../lib/file-transfer'
 import { useStoredResults, type StoredResult } from '../hooks/useStoredResults'
+import { extractXtcPages } from '../lib/xtc-reader'
 
 interface ConverterPageProps {
   fileType: 'cbz' | 'pdf'
@@ -30,6 +32,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     dismissRecovered,
     downloadResult,
     getPreviewImages,
+    getResultData,
   } = useStoredResults()
 
   // Check for transferred files on mount
@@ -61,6 +64,8 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
   const [progressText, setProgressText] = useState('Processing...')
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [viewerPages, setViewerPages] = useState<string[]>([])
+  const progressPreviewRef = useRef<string | null>(null)
+  const previewCacheRef = useRef<Map<string, string[]>>(new Map())
   const [options, setOptions] = useState<ConversionOptions>({
     splitMode: 'overlap',
     dithering: fileType === 'pdf' ? 'atkinson' : 'floyd',
@@ -86,6 +91,10 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     await clearSession() // Clear previous session results
     setProgress(0)
     setProgressText('Processing...')
+    if (progressPreviewRef.current && progressPreviewRef.current.startsWith('blob:')) {
+      URL.revokeObjectURL(progressPreviewRef.current)
+      progressPreviewRef.current = null
+    }
     setPreviewUrl(null)
 
     for (let i = 0; i < selectedFiles.length; i++) {
@@ -98,7 +107,13 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
         const actualFileType = file.name.toLowerCase().endsWith('.cbr') ? 'cbr' : fileType
         const result = await convertToXtc(file, actualFileType, options, (pageProgress, preview) => {
           setProgress((i + pageProgress) / selectedFiles.length)
-          if (preview) setPreviewUrl(preview)
+          if (!preview) return
+
+          if (progressPreviewRef.current && progressPreviewRef.current.startsWith('blob:')) {
+            URL.revokeObjectURL(progressPreviewRef.current)
+          }
+          progressPreviewRef.current = preview
+          setPreviewUrl(preview)
         })
 
         // Store result immediately - progressive display
@@ -117,16 +132,42 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
 
     setProgress(1)
     setProgressText('Complete')
+    if (progressPreviewRef.current && progressPreviewRef.current.startsWith('blob:')) {
+      URL.revokeObjectURL(progressPreviewRef.current)
+      progressPreviewRef.current = null
+    }
     setPreviewUrl(null)
     setIsConverting(false)
   }, [selectedFiles, fileType, options, addResult, clearSession])
 
   const handlePreview = useCallback(async (result: StoredResult) => {
-    const images = await getPreviewImages(result)
-    if (images.length > 0) {
-      setViewerPages(images)
+    const cached = previewCacheRef.current.get(result.id)
+    if (cached && cached.length > 0) {
+      setViewerPages(cached)
+      return
     }
-  }, [getPreviewImages])
+
+    const images = await getPreviewImages(result)
+    if (images.length > 0 && images.length === result.pageCount) {
+      previewCacheRef.current.set(result.id, images)
+      setViewerPages(images)
+      return
+    }
+
+    const data = await getResultData(result)
+    if (!data || data.byteLength === 0) {
+      if (images.length > 0) {
+        previewCacheRef.current.set(result.id, images)
+        setViewerPages(images)
+      }
+      return
+    }
+
+    const canvases = await extractXtcPages(data)
+    const decodedImages = canvases.map((canvas) => canvas.toDataURL('image/png'))
+    previewCacheRef.current.set(result.id, decodedImages)
+    setViewerPages(decodedImages)
+  }, [getPreviewImages, getResultData])
 
   const handleCloseViewer = useCallback(() => {
     setViewerPages([])
@@ -142,7 +183,16 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
 
   const handleClearResults = useCallback(async () => {
     await clearSession()
+    previewCacheRef.current.clear()
   }, [clearSession])
+
+  useEffect(() => {
+    return () => {
+      if (progressPreviewRef.current && progressPreviewRef.current.startsWith('blob:')) {
+        URL.revokeObjectURL(progressPreviewRef.current)
+      }
+    }
+  }, [])
 
   // Combine current and recovered results for display
   const allResults = [...recoveredResults, ...results]

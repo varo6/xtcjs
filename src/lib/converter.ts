@@ -7,38 +7,34 @@ import * as pdfjsLib from 'pdfjs-dist'
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { applyDithering } from './processing/dithering'
 import { toGrayscale, applyContrast, calculateOverlapSegments } from './processing/image'
-import { rotateCanvas, extractAndRotate, extractRegion, resizeWithPadding, TARGET_WIDTH, TARGET_HEIGHT } from './processing/canvas'
-import { buildXtc } from './xtc-format'
+import { rotateCanvas, extractAndRotate, resizeWithPadding, TARGET_WIDTH, TARGET_HEIGHT } from './processing/canvas'
+import { imageDataToXtg } from './processing/xtg'
+import { buildXtcFromXtgPages } from './xtc-format'
 import { extractPdfMetadata } from './metadata/pdf-outline'
 import { parseComicInfo } from './metadata/comicinfo'
 import { PageMappingContext, adjustTocForMapping } from './page-mapping'
+import { ConvertWorkerPool, isWorkerPipelineSupported } from './conversion/worker-pool'
 import type { BookMetadata } from './metadata/types'
+import type { ConversionOptions, ConversionResult } from './conversion/types'
+
+export type { ConversionOptions, ConversionResult } from './conversion/types'
 
 // Set up PDF.js worker from bundled asset
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
-export interface ConversionOptions {
-  splitMode: string
-  dithering: string
-  contrast: number
-  horizontalMargin: number
-  verticalMargin: number
-  orientation: 'landscape' | 'portrait'
-  landscapeFlipClockwise: boolean
-}
-
-export interface ConversionResult {
-  name: string
-  data?: ArrayBuffer
-  size?: number
-  pageCount?: number
-  pageImages?: string[]
-  error?: string
-}
+const PERF_PIPELINE_V2 = true
+const PREVIEW_EVERY_N_PAGES = 5
+const MAX_STORED_PREVIEWS = 12
+const PREVIEW_JPEG_QUALITY = 0.55
 
 interface ProcessedPage {
   name: string
   canvas: HTMLCanvasElement
+}
+
+interface EncodedPage {
+  name: string
+  xtg: ArrayBuffer
 }
 
 interface CropRect {
@@ -73,6 +69,169 @@ function getAxisCropRect(
     width: Math.max(1, sourceWidth - cropX * 2),
     height: Math.max(1, sourceHeight - cropY * 2)
   }
+}
+
+function shouldGenerateSampledPreview(pageNum: number, totalPages: number): boolean {
+  return pageNum === 1 || pageNum === totalPages || pageNum % PREVIEW_EVERY_N_PAGES === 0
+}
+
+function calculateWorkerPoolSize(): number {
+  const cores = Math.max(2, navigator.hardwareConcurrency || 4)
+  return Math.max(2, Math.min(6, Math.floor(cores * 0.6)))
+}
+
+async function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality?: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error('Failed to encode canvas preview'))
+        return
+      }
+      resolve(blob)
+    }, type, quality)
+  })
+}
+
+async function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => reject(new Error('Failed to convert blob to data URL'))
+    reader.readAsDataURL(blob)
+  })
+}
+
+function encodeCanvasPage(page: ProcessedPage): EncodedPage {
+  const ctx = page.canvas.getContext('2d')!
+  const imageData = ctx.getImageData(0, 0, TARGET_WIDTH, TARGET_HEIGHT)
+  return {
+    name: page.name,
+    xtg: imageDataToXtg(imageData)
+  }
+}
+
+async function finalizeConversionResult(
+  outputName: string,
+  encodedPages: EncodedPage[],
+  mappingCtx: PageMappingContext,
+  metadata: BookMetadata,
+  sampledPreviews: string[]
+): Promise<ConversionResult> {
+  encodedPages.sort((a, b) => a.name.localeCompare(b.name))
+
+  if (metadata.toc.length > 0) {
+    metadata.toc = adjustTocForMapping(metadata.toc, mappingCtx)
+  }
+
+  const xtcData = await buildXtcFromXtgPages(encodedPages.map((page) => page.xtg), { metadata })
+
+  return {
+    name: outputName,
+    data: xtcData,
+    size: xtcData.byteLength,
+    pageCount: encodedPages.length,
+    pageImages: sampledPreviews,
+    previewMode: 'sparse'
+  }
+}
+
+async function processArchiveSourcePages(
+  totalPages: number,
+  getBlob: (index: number) => Promise<Blob>,
+  options: ConversionOptions,
+  onProgress: (progress: number, previewUrl: string | null) => void
+): Promise<{ encodedPages: EncodedPage[]; mappingCtx: PageMappingContext; sampledPreviews: string[] }> {
+  const sampledPreviews: string[] = []
+  const pageResultsByIndex: EncodedPage[][] = new Array(totalPages)
+
+  let pool: ConvertWorkerPool | null = null
+  let workerDisabled = false
+  let completed = 0
+  let nextIndex = 0
+
+  if (PERF_PIPELINE_V2 && isWorkerPipelineSupported()) {
+    pool = new ConvertWorkerPool(calculateWorkerPoolSize())
+  }
+
+  const concurrency = pool ? calculateWorkerPoolSize() : 1
+
+  const runSlot = async () => {
+    while (true) {
+      const index = nextIndex++
+      if (index >= totalPages) {
+        return
+      }
+
+      const pageNum = index + 1
+      const includePreview = shouldGenerateSampledPreview(pageNum, totalPages)
+      const imgBlob = await getBlob(index)
+
+      let previewForProgress: string | null = null
+      let previewForStorage: string | null = null
+      let pageResults: EncodedPage[] = []
+
+      if (pool && !workerDisabled) {
+        try {
+          const workerPages = await pool.processPage(pageNum, imgBlob, options, includePreview)
+          pageResults = workerPages.map((page) => ({ name: page.name, xtg: page.xtg }))
+
+          if (includePreview) {
+            const previewBytes = workerPages.find((page) => page.previewJpeg)?.previewJpeg
+            if (previewBytes) {
+              const previewBlob = new Blob([previewBytes], { type: 'image/jpeg' })
+              previewForProgress = URL.createObjectURL(previewBlob)
+              if (sampledPreviews.length < MAX_STORED_PREVIEWS) {
+                previewForStorage = await blobToDataUrl(previewBlob)
+              }
+            }
+          }
+        } catch {
+          if (!workerDisabled) {
+            workerDisabled = true
+            pool.destroy()
+            pool = null
+          }
+        }
+      }
+
+      if (pageResults.length === 0) {
+        const pages = await processImage(imgBlob, pageNum, options)
+        pageResults = pages.map(encodeCanvasPage)
+
+        if (includePreview && pages.length > 0 && pages[0].canvas) {
+          const previewDataUrl = pages[0].canvas.toDataURL('image/jpeg', PREVIEW_JPEG_QUALITY)
+          previewForProgress = previewDataUrl
+          if (sampledPreviews.length < MAX_STORED_PREVIEWS) {
+            previewForStorage = previewDataUrl
+          }
+        }
+      }
+
+      pageResultsByIndex[index] = pageResults
+      if (previewForStorage && sampledPreviews.length < MAX_STORED_PREVIEWS) {
+        sampledPreviews.push(previewForStorage)
+      }
+
+      completed++
+      onProgress(completed / totalPages, previewForProgress)
+    }
+  }
+
+  try {
+    await Promise.all(Array.from({ length: concurrency }, () => runSlot()))
+  } finally {
+    pool?.destroy()
+  }
+
+  const mappingCtx = new PageMappingContext()
+  const encodedPages: EncodedPage[] = []
+  for (let i = 0; i < totalPages; i++) {
+    const pages = pageResultsByIndex[i] || []
+    mappingCtx.addOriginalPage(i + 1, pages.length)
+    encodedPages.push(...pages)
+  }
+
+  return { encodedPages, mappingCtx, sampledPreviews }
 }
 
 /**
@@ -116,7 +275,6 @@ export async function convertCbzToXtc(
       imageFiles.push({ path: relativePath, entry: zipEntry })
     }
 
-    // Look for ComicInfo.xml
     if (relativePath.toLowerCase() === 'comicinfo.xml' ||
         relativePath.toLowerCase().endsWith('/comicinfo.xml')) {
       comicInfoEntry = zipEntry
@@ -129,55 +287,30 @@ export async function convertCbzToXtc(
     throw new Error('No images found in CBZ')
   }
 
-  // Extract metadata from ComicInfo.xml if present
   let metadata: BookMetadata = { toc: [] }
   if (comicInfoEntry) {
     try {
       const xmlContent = await comicInfoEntry.async('string')
       metadata = parseComicInfo(xmlContent)
     } catch {
-      // ComicInfo parsing failed, continue without metadata
+      // Continue conversion without metadata.
     }
   }
 
-  const processedPages: ProcessedPage[] = []
-  const mappingCtx = new PageMappingContext()
+  const { encodedPages, mappingCtx, sampledPreviews } = await processArchiveSourcePages(
+    imageFiles.length,
+    (index) => imageFiles[index].entry.async('blob'),
+    options,
+    onProgress
+  )
 
-  for (let i = 0; i < imageFiles.length; i++) {
-    const imgFile = imageFiles[i]
-    const imgBlob = await imgFile.entry.async('blob')
-
-    const pages = await processImage(imgBlob, i + 1, options)
-    processedPages.push(...pages)
-
-    // Track page mapping for TOC adjustment
-    mappingCtx.addOriginalPage(i + 1, pages.length)
-
-    if (pages.length > 0 && pages[0].canvas) {
-      const previewUrl = pages[0].canvas.toDataURL('image/png')
-      onProgress((i + 1) / imageFiles.length, previewUrl)
-    } else {
-      onProgress((i + 1) / imageFiles.length, null)
-    }
-  }
-
-  processedPages.sort((a, b) => a.name.localeCompare(b.name))
-
-  // Adjust TOC page numbers based on mapping
-  if (metadata.toc.length > 0) {
-    metadata.toc = adjustTocForMapping(metadata.toc, mappingCtx)
-  }
-
-  const pageImages = processedPages.map(page => page.canvas.toDataURL('image/png'))
-  const xtcData = await buildXtc(processedPages, { metadata })
-
-  return {
-    name: file.name.replace(/\.cbz$/i, '.xtc'),
-    data: xtcData,
-    size: xtcData.byteLength,
-    pageCount: processedPages.length,
-    pageImages
-  }
+  return finalizeConversionResult(
+    file.name.replace(/\.cbz$/i, '.xtc'),
+    encodedPages,
+    mappingCtx,
+    metadata,
+    sampledPreviews
+  )
 }
 
 // Cache for loaded wasm binary
@@ -208,7 +341,6 @@ export async function convertCbrToXtc(
   const imageFiles: Array<{ path: string; data: Uint8Array }> = []
   let comicInfoContent: string | null = null
 
-  // Extract all files from the RAR archive
   const { files } = extractor.extract()
   for (const extractedFile of files) {
     if (extractedFile.fileHeader.flags.directory) continue
@@ -221,7 +353,6 @@ export async function convertCbrToXtc(
       imageFiles.push({ path, data: extractedFile.extraction })
     }
 
-    // Look for ComicInfo.xml
     if ((path.toLowerCase() === 'comicinfo.xml' ||
          path.toLowerCase().endsWith('/comicinfo.xml')) &&
         extractedFile.extraction) {
@@ -236,55 +367,29 @@ export async function convertCbrToXtc(
     throw new Error('No images found in CBR')
   }
 
-  // Extract metadata from ComicInfo.xml if present
   let metadata: BookMetadata = { toc: [] }
   if (comicInfoContent) {
     try {
       metadata = parseComicInfo(comicInfoContent)
     } catch {
-      // ComicInfo parsing failed, continue without metadata
+      // Continue conversion without metadata.
     }
   }
 
-  const processedPages: ProcessedPage[] = []
-  const mappingCtx = new PageMappingContext()
+  const { encodedPages, mappingCtx, sampledPreviews } = await processArchiveSourcePages(
+    imageFiles.length,
+    async (index) => new Blob([new Uint8Array(imageFiles[index].data)]),
+    options,
+    onProgress
+  )
 
-  for (let i = 0; i < imageFiles.length; i++) {
-    const imgFile = imageFiles[i]
-    // Create a copy of the data with a regular ArrayBuffer for Blob compatibility
-    const imgBlob = new Blob([new Uint8Array(imgFile.data)])
-
-    const pages = await processImage(imgBlob, i + 1, options)
-    processedPages.push(...pages)
-
-    // Track page mapping for TOC adjustment
-    mappingCtx.addOriginalPage(i + 1, pages.length)
-
-    if (pages.length > 0 && pages[0].canvas) {
-      const previewUrl = pages[0].canvas.toDataURL('image/png')
-      onProgress((i + 1) / imageFiles.length, previewUrl)
-    } else {
-      onProgress((i + 1) / imageFiles.length, null)
-    }
-  }
-
-  processedPages.sort((a, b) => a.name.localeCompare(b.name))
-
-  // Adjust TOC page numbers based on mapping
-  if (metadata.toc.length > 0) {
-    metadata.toc = adjustTocForMapping(metadata.toc, mappingCtx)
-  }
-
-  const pageImages = processedPages.map(page => page.canvas.toDataURL('image/png'))
-  const xtcData = await buildXtc(processedPages, { metadata })
-
-  return {
-    name: file.name.replace(/\.cbr$/i, '.xtc'),
-    data: xtcData,
-    size: xtcData.byteLength,
-    pageCount: processedPages.length,
-    pageImages
-  }
+  return finalizeConversionResult(
+    file.name.replace(/\.cbr$/i, '.xtc'),
+    encodedPages,
+    mappingCtx,
+    metadata,
+    sampledPreviews
+  )
 }
 
 /**
@@ -298,21 +403,21 @@ async function convertPdfToXtc(
   const arrayBuffer = await file.arrayBuffer()
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
 
-  // Extract metadata (title, author, TOC) from PDF
   let metadata: BookMetadata = { toc: [] }
   try {
     metadata = await extractPdfMetadata(pdf)
   } catch {
-    // Metadata extraction failed, continue without it
+    // Continue conversion without metadata.
   }
 
-  const processedPages: ProcessedPage[] = []
+  const encodedPages: EncodedPage[] = []
+  const sampledPreviews: string[] = []
   const mappingCtx = new PageMappingContext()
   const numPages = pdf.numPages
 
   for (let i = 1; i <= numPages; i++) {
     const page = await pdf.getPage(i)
-    const scale = 2.0 // Render at 2x for better quality
+    const scale = 2.0
     const viewport = page.getViewport({ scale })
 
     const canvas = document.createElement('canvas')
@@ -326,36 +431,30 @@ async function convertPdfToXtc(
     }).promise
 
     const pages = processCanvasAsImage(canvas, i, options)
-    processedPages.push(...pages)
-
-    // Track page mapping for TOC adjustment
+    encodedPages.push(...pages.map(encodeCanvasPage))
     mappingCtx.addOriginalPage(i, pages.length)
 
-    if (pages.length > 0 && pages[0].canvas) {
-      const previewUrl = pages[0].canvas.toDataURL('image/png')
-      onProgress(i / numPages, previewUrl)
+    const includePreview = shouldGenerateSampledPreview(i, numPages)
+    if (includePreview && pages.length > 0 && pages[0].canvas) {
+      const previewBlob = await canvasToBlob(pages[0].canvas, 'image/jpeg', PREVIEW_JPEG_QUALITY)
+      const previewDataUrl = await blobToDataUrl(previewBlob)
+      onProgress(i / numPages, previewDataUrl)
+
+      if (sampledPreviews.length < MAX_STORED_PREVIEWS) {
+        sampledPreviews.push(previewDataUrl)
+      }
     } else {
       onProgress(i / numPages, null)
     }
   }
 
-  processedPages.sort((a, b) => a.name.localeCompare(b.name))
-
-  // Adjust TOC page numbers based on mapping
-  if (metadata.toc.length > 0) {
-    metadata.toc = adjustTocForMapping(metadata.toc, mappingCtx)
-  }
-
-  const pageImages = processedPages.map(page => page.canvas.toDataURL('image/png'))
-  const xtcData = await buildXtc(processedPages, { metadata })
-
-  return {
-    name: file.name.replace(/\.pdf$/i, '.xtc'),
-    data: xtcData,
-    size: xtcData.byteLength,
-    pageCount: processedPages.length,
-    pageImages
-  }
+  return finalizeConversionResult(
+    file.name.replace(/\.pdf$/i, '.xtc'),
+    encodedPages,
+    mappingCtx,
+    metadata,
+    sampledPreviews
+  )
 }
 
 /**
@@ -381,8 +480,8 @@ function processCanvasAsImage(
     crop.width, crop.height
   )
 
-  let width = crop.width
-  let height = crop.height
+  const width = crop.width
+  const height = crop.height
 
   if (options.contrast > 0) {
     applyContrast(ctx, width, height, options.contrast)
@@ -390,7 +489,6 @@ function processCanvasAsImage(
 
   toGrayscale(ctx, width, height)
 
-  // Portrait mode: no rotation, 1 page = 1 page on e-reader
   if (options.orientation === 'portrait') {
     const finalCanvas = resizeWithPadding(canvas)
     applyDithering(finalCanvas.getContext('2d')!, TARGET_WIDTH, TARGET_HEIGHT, options.dithering)
@@ -402,7 +500,6 @@ function processCanvasAsImage(
     return results
   }
 
-  // Landscape mode: rotate and optionally split
   const landscapeRotation = options.landscapeFlipClockwise ? -90 : 90
   const shouldSplit = width < height && options.splitMode !== 'nosplit'
 
@@ -502,18 +599,15 @@ function processLoadedImage(
     crop.width, crop.height
   )
 
-  let width = crop.width
-  let height = crop.height
+  const width = crop.width
+  const height = crop.height
 
-  // Apply contrast enhancement
   if (options.contrast > 0) {
     applyContrast(ctx, width, height, options.contrast)
   }
 
-  // Convert to grayscale
   toGrayscale(ctx, width, height)
 
-  // Portrait mode: no rotation, 1 page = 1 page on e-reader
   if (options.orientation === 'portrait') {
     const finalCanvas = resizeWithPadding(canvas)
     applyDithering(finalCanvas.getContext('2d')!, TARGET_WIDTH, TARGET_HEIGHT, options.dithering)
@@ -525,7 +619,6 @@ function processLoadedImage(
     return results
   }
 
-  // Landscape mode: rotate and optionally split
   const landscapeRotation = options.landscapeFlipClockwise ? -90 : 90
   const shouldSplit = width < height && options.splitMode !== 'nosplit'
 
