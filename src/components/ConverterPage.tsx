@@ -5,6 +5,7 @@ import { Options } from './Options'
 import { Progress } from './Progress'
 import { Results } from './Results'
 import { Viewer } from './Viewer'
+import JSZip from 'jszip'
 import { convertToXtc } from '../lib/converter'
 import type { ConversionOptions } from '../lib/conversion/types'
 import { recordConversion } from '../lib/api'
@@ -19,6 +20,45 @@ interface ConverterPageProps {
 
 const MAX_FALLBACK_PREVIEW_PAGES = 200
 const PROGRESS_UPDATE_INTERVAL_MS = 120
+
+function formatZipTimestamp(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  return `${year}${month}${day}-${hours}${minutes}${seconds}`
+}
+
+function normalizeZipEntryName(name: string): string {
+  const trimmed = name.trim()
+  if (!trimmed) return 'conversion.xtc'
+  const baseName = trimmed.split(/[\\/]/).pop()
+  return baseName && baseName.length > 0 ? baseName : 'conversion.xtc'
+}
+
+function getUniqueZipEntryName(fileName: string, usedNames: Set<string>): string {
+  const normalized = fileName.toLowerCase()
+  if (!usedNames.has(normalized)) {
+    usedNames.add(normalized)
+    return fileName
+  }
+
+  const dotIndex = fileName.lastIndexOf('.')
+  const base = dotIndex > 0 ? fileName.slice(0, dotIndex) : fileName
+  const ext = dotIndex > 0 ? fileName.slice(dotIndex) : ''
+
+  let suffix = 2
+  let candidate = `${base} (${suffix})${ext}`
+  while (usedNames.has(candidate.toLowerCase())) {
+    suffix++
+    candidate = `${base} (${suffix})${ext}`
+  }
+
+  usedNames.add(candidate.toLowerCase())
+  return candidate
+}
 
 export function ConverterPage({ fileType, notice }: ConverterPageProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
@@ -268,6 +308,52 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     }
   }, [downloadResult])
 
+  const handleDownloadAll = useCallback(async () => {
+    const successfulResults = [...recoveredResults, ...results].filter(result => !result.error)
+    if (successfulResults.length === 0) {
+      return
+    }
+
+    try {
+      const zip = new JSZip()
+      const usedNames = new Set<string>()
+      let addedCount = 0
+
+      for (const result of successfulResults) {
+        const data = await getResultData(result)
+        if (!data || data.byteLength === 0) {
+          console.warn(`Skipping ${result.name}: no data found`)
+          continue
+        }
+
+        const entryName = getUniqueZipEntryName(normalizeZipEntryName(result.name), usedNames)
+        zip.file(entryName, data)
+        addedCount++
+      }
+
+      if (addedCount === 0) {
+        console.warn('No valid files found for ZIP download')
+        return
+      }
+
+      const zipBlob = await zip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+      })
+      const archiveName = `xtcjs-conversions-${formatZipTimestamp(new Date())}.zip`
+      const url = URL.createObjectURL(zipBlob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = archiveName
+      document.body.appendChild(anchor)
+      anchor.click()
+      document.body.removeChild(anchor)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Download all failed:', err)
+    }
+  }, [recoveredResults, results, getResultData])
+
   const handleClearResults = useCallback(async () => {
     await clearSession()
     previewCacheRef.current.clear()
@@ -286,6 +372,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
 
   // Combine current and recovered results for display
   const allResults = [...recoveredResults, ...results]
+  const downloadableCount = allResults.filter(result => !result.error).length
 
   return (
     <>
@@ -338,6 +425,8 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
       <Results
         results={allResults}
         onDownload={handleDownload}
+        onDownloadAll={downloadableCount > 0 ? handleDownloadAll : undefined}
+        downloadAllCount={downloadableCount}
         onPreview={handlePreview}
         onClear={results.length > 0 ? handleClearResults : undefined}
       />

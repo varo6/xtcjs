@@ -1031,6 +1031,35 @@
   color: var(--accent);
 }
 
+.results-header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.results-header-actions .btn-clear-results {
+  margin-left: 0;
+}
+
+.btn-download-results-zip {
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--ink);
+  border: 1px solid var(--ink);
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-download-results-zip:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
 /* Metadata editor */
 .metadata-status {
   margin: var(--space-md) 0;

@@ -5,10 +5,19 @@ interface ResultsProps {
   results: StoredResult[]
   onDownload: (result: StoredResult) => void | Promise<void>
   onPreview: (result: StoredResult) => void | Promise<void>
+  onDownloadAll?: () => void | Promise<void>
+  downloadAllCount?: number
   onClear?: () => void | Promise<void>
 }
 
-export function Results({ results, onDownload, onPreview, onClear }: ResultsProps) {
+export function Results({
+  results,
+  onDownload,
+  onPreview,
+  onDownloadAll,
+  downloadAllCount = 0,
+  onClear,
+}: ResultsProps) {
   if (results.length === 0) {
     return null
   }
@@ -17,10 +26,19 @@ export function Results({ results, onDownload, onPreview, onClear }: ResultsProp
     <section className="results-section">
       <div className="section-header">
         <h2>Complete</h2>
-        {onClear && (
-          <button className="btn-clear-results" onClick={onClear}>
-            Clear Results
-          </button>
+        {(onDownloadAll || onClear) && (
+          <div className="results-header-actions">
+            {onDownloadAll && downloadAllCount > 0 && (
+              <button className="btn-download-results-zip" onClick={onDownloadAll}>
+                Download All ({downloadAllCount})
+              </button>
+            )}
+            {onClear && (
+              <button className="btn-clear-results" onClick={onClear}>
+                Clear Results
+              </button>
+            )}
+          </div>
         )}
       </div>
       <div className="results-grid">
