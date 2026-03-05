@@ -7,6 +7,7 @@ interface ResultsProps {
   onPreview: (result: StoredResult) => void | Promise<void>
   onDownloadAll?: () => void | Promise<void>
   downloadAllCount?: number
+  isDownloadAllLoading?: boolean
   onClear?: () => void | Promise<void>
 }
 
@@ -16,6 +17,7 @@ export function Results({
   onPreview,
   onDownloadAll,
   downloadAllCount = 0,
+  isDownloadAllLoading = false,
   onClear,
 }: ResultsProps) {
   if (results.length === 0) {
@@ -29,8 +31,20 @@ export function Results({
         {(onDownloadAll || onClear) && (
           <div className="results-header-actions">
             {onDownloadAll && downloadAllCount > 0 && (
-              <button className="btn-download-results-zip" onClick={onDownloadAll}>
-                Download All ({downloadAllCount})
+              <button
+                className={`btn-download-results-zip${isDownloadAllLoading ? ' loading' : ''}`}
+                onClick={onDownloadAll}
+                disabled={isDownloadAllLoading}
+                aria-busy={isDownloadAllLoading}
+              >
+                <span>
+                  {isDownloadAllLoading
+                    ? 'Creating ZIP...'
+                    : `Download All (${downloadAllCount})`}
+                </span>
+                {isDownloadAllLoading && (
+                  <span className="btn-download-results-zip-spinner" aria-hidden="true" />
+                )}
               </button>
             )}
             {onClear && (

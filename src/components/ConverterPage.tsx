@@ -111,6 +111,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
   const [isConverting, setIsConverting] = useState(false)
   const [progress, setProgress] = useState(0)
   const [progressText, setProgressText] = useState('Processing...')
+  const [isDownloadAllLoading, setIsDownloadAllLoading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [viewerPages, setViewerPages] = useState<string[]>([])
   const progressPreviewRef = useRef<string | null>(null)
@@ -309,10 +310,16 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
   }, [downloadResult])
 
   const handleDownloadAll = useCallback(async () => {
+    if (isDownloadAllLoading) {
+      return
+    }
+
     const successfulResults = [...recoveredResults, ...results].filter(result => !result.error)
     if (successfulResults.length === 0) {
       return
     }
+
+    setIsDownloadAllLoading(true)
 
     try {
       const zip = new JSZip()
@@ -351,8 +358,10 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
       URL.revokeObjectURL(url)
     } catch (err) {
       console.error('Download all failed:', err)
+    } finally {
+      setIsDownloadAllLoading(false)
     }
-  }, [recoveredResults, results, getResultData])
+  }, [recoveredResults, results, getResultData, isDownloadAllLoading])
 
   const handleClearResults = useCallback(async () => {
     await clearSession()
@@ -427,6 +436,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
         onDownload={handleDownload}
         onDownloadAll={downloadableCount > 0 ? handleDownloadAll : undefined}
         downloadAllCount={downloadableCount}
+        isDownloadAllLoading={isDownloadAllLoading}
         onPreview={handlePreview}
         onClear={results.length > 0 ? handleClearResults : undefined}
       />

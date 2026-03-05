@@ -1053,11 +1053,31 @@
   font-size: 0.7rem;
   cursor: pointer;
   transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
 }
 
 .btn-download-results-zip:hover {
   background: var(--accent);
   border-color: var(--accent);
+}
+
+.btn-download-results-zip:disabled {
+  cursor: default;
+}
+
+.btn-download-results-zip.loading {
+  opacity: 0.92;
+}
+
+.btn-download-results-zip-spinner {
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
 /* Metadata editor */
