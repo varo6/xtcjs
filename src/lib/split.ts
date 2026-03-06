@@ -1,14 +1,11 @@
 // Split logic for CBZ, PDF, and XTC files
 
 import JSZip from 'jszip'
-import * as pdfjsLib from 'pdfjs-dist'
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { buildXtc } from './xtc-format'
 import { parseXtcFile } from './xtc-reader'
 import { buildCbz, splitPdf, type OutputFormat, detectFileType } from './merge'
+import { loadPdfDocument } from './pdfjs'
 import { TARGET_WIDTH, TARGET_HEIGHT } from './processing/canvas'
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
 export interface PageRange {
   start: number
@@ -130,7 +127,7 @@ async function getCbzPageCount(file: File): Promise<number> {
 
 async function getPdfPageCount(file: File): Promise<number> {
   const arrayBuffer = await file.arrayBuffer()
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+  const pdf = await loadPdfDocument(arrayBuffer)
   return pdf.numPages
 }
 
@@ -291,7 +288,7 @@ async function splitPdfFile(
 
   // For CBZ or XTC output, render PDF pages to canvases
   const arrayBuffer = await file.arrayBuffer()
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+  const pdf = await loadPdfDocument(arrayBuffer)
 
   const results: SplitResult[] = []
 

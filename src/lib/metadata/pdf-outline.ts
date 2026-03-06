@@ -1,6 +1,6 @@
 // PDF outline/bookmark extraction
 
-import type { PDFDocumentProxy } from 'pdfjs-dist'
+import type { PDFDocumentProxy } from '../pdfjs'
 import type { BookMetadata, TocEntry } from './types'
 
 interface PdfOutlineItem {

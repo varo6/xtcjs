@@ -3,8 +3,6 @@
 import JSZip from 'jszip'
 import { createExtractorFromData } from 'node-unrar-js'
 import unrarWasm from 'node-unrar-js/esm/js/unrar.wasm?url'
-import * as pdfjsLib from 'pdfjs-dist'
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { applyDithering } from './processing/dithering'
 import { toGrayscale, applyContrast, calculateOverlapSegments } from './processing/image'
 import { rotateCanvas, extractAndRotate, resizeWithPadding, getTargetDimensions } from './processing/canvas'
@@ -14,13 +12,11 @@ import { extractPdfMetadata } from './metadata/pdf-outline'
 import { parseComicInfo } from './metadata/comicinfo'
 import { PageMappingContext, adjustTocForMapping } from './page-mapping'
 import { ConvertWorkerPool, isWorkerPipelineSupported } from './conversion/worker-pool'
+import { loadPdfDocument } from './pdfjs'
 import type { BookMetadata } from './metadata/types'
 import type { ConversionOptions, ConversionResult } from './conversion/types'
 
 export type { ConversionOptions, ConversionResult } from './conversion/types'
-
-// Set up PDF.js worker from bundled asset
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
 const PERF_PIPELINE_V2 = true
 const PREVIEW_EVERY_N_PAGES = 5
@@ -715,7 +711,7 @@ async function convertPdfToXtc(
   onProgress: (progress: number, previewUrl: string | null) => void
 ): Promise<ConversionResult> {
   const arrayBuffer = await file.arrayBuffer()
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+  const pdf = await loadPdfDocument(arrayBuffer)
 
   let metadata: BookMetadata = { toc: [] }
   try {

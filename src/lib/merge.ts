@@ -1,14 +1,11 @@
 // Merge logic for CBZ, PDF, and XTC files
 
 import JSZip from 'jszip'
-import * as pdfjsLib from 'pdfjs-dist'
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { PDFDocument } from 'pdf-lib'
 import { buildXtc } from './xtc-format'
 import { extractXtcPages, extractXtcRawPages, parseXtcFile } from './xtc-reader'
+import { loadPdfDocument } from './pdfjs'
 import { TARGET_WIDTH, TARGET_HEIGHT } from './processing/canvas'
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
 export type FileType = 'cbz' | 'cbr' | 'pdf' | 'xtc' | 'unknown'
 export type OutputFormat = 'xtc' | 'cbz' | 'pdf'
@@ -252,7 +249,7 @@ export async function mergePdfFiles(
     })
 
     const arrayBuffer = await file.arrayBuffer()
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+    const pdf = await loadPdfDocument(arrayBuffer)
     const numPages = pdf.numPages
 
     for (let i = 1; i <= numPages; i++) {
