@@ -125,6 +125,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     device: 'X4',
     splitMode: (fileType === 'image' || fileType === 'video') ? 'nosplit' : 'overlap',
     dithering: fileType === 'pdf' ? 'atkinson' : 'floyd',
+    is2bit: false,
     contrast: fileType === 'pdf' ? 8 : 4,
     horizontalMargin: 0,
     verticalMargin: 0,
@@ -241,7 +242,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
         console.error(`Error converting ${file.name}:`, err)
         // Store error result
         await addResult({
-          name: file.name.replace(/\.[^/.]+$/i, '.xtc'),
+          name: file.name.replace(/\.[^/.]+$/i, options.is2bit ? '.xtch' : '.xtc'),
           error: normalizeUserErrorMessage(err instanceof Error ? err.message : 'Unknown error'),
         })
       }

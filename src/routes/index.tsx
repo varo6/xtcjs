@@ -9,7 +9,7 @@ function MangaPage() {
   return (
     <ConverterPage
       fileType="cbz"
-      notice="A CBZ -> XTC converter for your manga. Recommended settings are selected by default"
+      notice="A CBZ -> XTC/XTCH converter for your manga. Recommended settings are selected by default."
     />
   )
 }
