@@ -11,7 +11,7 @@ function AboutPage() {
         <h1>About XTC.js</h1>
         <p>
           XTC.js is a free, browser-based converter that transforms your CBZ comic archives and PDF documents
-          into XTC format, optimized for the <strong>XTEink X4 e-reader</strong>. 
+          into XTC or XTCH format, optimized for the <strong>XTEink X4 e-reader</strong>.
           It runs entirely in your browser — your files never leave your device, ensuring complete privacy.
         </p>
       </section>
@@ -20,7 +20,8 @@ function AboutPage() {
         <h2>Features</h2>
         <ul className="feature-list">
           <li><strong>Privacy-first:</strong> All processing happens locally in your browser. No uploads, no servers, no tracking.</li>
-          <li><strong>Multiple formats:</strong> Convert CBZ (manga/comics) and PDF documents to XTC.</li>
+          <li><strong>Multiple formats:</strong> Convert CBZ (manga/comics), PDFs, images, and video frames to XTC or XTCH.</li>
+          <li><strong>XTCH 2-bit mode:</strong> Use 4 grayscale levels for smoother screentones and cleaner gradients on supported devices.</li>
           <li><strong>Dithering options:</strong> Choose from Floyd-Steinberg, Atkinson, Sierra-Lite, Ordered, or no dithering for optimal e-ink display.</li>
           <li><strong>Contrast adjustment:</strong> Fine-tune contrast levels for better readability on e-ink screens.</li>
           <li><strong>Smart splitting:</strong> Automatically splits landscape pages for portrait e-reader displays.</li>
@@ -35,16 +36,16 @@ function AboutPage() {
           <li><strong>Select files:</strong> Drag and drop your CBZ or PDF files, or click to browse.</li>
           <li><strong>Adjust settings:</strong> Choose your preferred dithering algorithm and contrast level.</li>
           <li><strong>Convert:</strong> Click the convert button and watch the real-time preview.</li>
-          <li><strong>Download:</strong> Save your XTC files and transfer them to your XTEink X4.</li>
+          <li><strong>Download:</strong> Save your XTC or XTCH files and transfer them to your XTEink X4.</li>
         </ol>
       </section>
 
       <section className="content-section">
         <h2>About the XTC Format</h2>
         <p>
-          XTC is the native format for the XTEink X4 e-reader. It contains optimized 1-bit (black and white)
-          images at 480×800 resolution, specifically designed for e-ink displays. The format uses efficient
-          compression to minimize file size while maintaining excellent readability for manga, comics, and documents.
+          XTC is the native 1-bit format for the XTEink X4 e-reader. XTCH is its 2-bit grayscale variant and can
+          preserve screentones and shaded artwork more cleanly. Both formats use 480×800 pages designed for e-ink
+          displays and are optimized for manga, comics, and documents.
         </p>
       </section>
 

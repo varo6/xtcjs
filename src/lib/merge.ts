@@ -2,7 +2,7 @@
 
 import JSZip from 'jszip'
 import { PDFDocument } from 'pdf-lib'
-import { buildXtc } from './xtc-format'
+import { buildXtc, buildXtcFromBuffers } from './xtc-format'
 import { extractXtcPages, extractXtcRawPages, parseXtcFile } from './xtc-reader'
 import { loadPdfDocument } from './pdfjs'
 import { TARGET_WIDTH, TARGET_HEIGHT } from './processing/canvas'
@@ -39,6 +39,7 @@ export function detectFileType(file: File): FileType {
     case 'pdf':
       return 'pdf'
     case 'xtc':
+    case 'xtch':
       return 'xtc'
     default:
       return 'unknown'
@@ -320,8 +321,9 @@ export async function mergeXtcFiles(
   onProgress: (progress: MergeProgress) => void
 ): Promise<MergeResult> {
   if (outputFormat === 'xtc') {
-    // Fast path: concatenate raw XTG data without decoding
+    // Fast path: concatenate raw XTG/XTH data without decoding.
     const allXtgData: ArrayBuffer[] = []
+    let is2bit: boolean | null = null
 
     for (let fileIdx = 0; fileIdx < files.length; fileIdx++) {
       const file = files[fileIdx]
@@ -333,6 +335,12 @@ export async function mergeXtcFiles(
       })
 
       const buffer = await file.arrayBuffer()
+      const parsed = await parseXtcFile(buffer, 0)
+      if (is2bit === null) {
+        is2bit = parsed.header.is2bit
+      } else if (parsed.header.is2bit !== is2bit) {
+        throw new Error('Cannot merge XTC and XTCH files together')
+      }
       const rawPages = await extractXtcRawPages(buffer)
       allXtgData.push(...rawPages)
 
@@ -344,9 +352,9 @@ export async function mergeXtcFiles(
       })
     }
 
-    const data = buildXtcFromRawPages(allXtgData)
+    const data = await buildXtcFromBuffers(allXtgData, { is2bit: is2bit ?? false })
     return {
-      name: 'merged.xtc',
+      name: `merged.${is2bit ? 'xtch' : 'xtc'}`,
       data,
       size: data.byteLength,
       pageCount: allXtgData.length,
@@ -434,74 +442,6 @@ export async function splitPdf(
   }
 
   return results
-}
-
-/**
- * Build XTC from raw XTG page data (fast path for XTC merge)
- */
-function buildXtcFromRawPages(xtgBlobs: ArrayBuffer[]): ArrayBuffer {
-  const pageCount = xtgBlobs.length
-  const headerSize = 48
-  const indexEntrySize = 16
-  const indexOffset = headerSize
-  const dataOffset = indexOffset + pageCount * indexEntrySize
-
-  let totalSize = dataOffset
-  for (const blob of xtgBlobs) {
-    totalSize += blob.byteLength
-  }
-
-  const buffer = new ArrayBuffer(totalSize)
-  const view = new DataView(buffer)
-  const uint8 = new Uint8Array(buffer)
-
-  // Header: XTC magic number
-  uint8[0] = 0x58; uint8[1] = 0x54; uint8[2] = 0x43; uint8[3] = 0x00
-  view.setUint16(4, 1, true) // version
-  view.setUint16(6, pageCount, true)
-  view.setUint8(8, 0)
-  view.setUint8(9, 0)
-  view.setUint8(10, 0)
-  view.setUint8(11, 0)
-  view.setUint32(12, 0, true)
-
-  setBigUint64(view, 16, 0n)
-  setBigUint64(view, 24, BigInt(indexOffset))
-  setBigUint64(view, 32, BigInt(dataOffset))
-  setBigUint64(view, 40, 0n)
-
-  // Write index entries
-  let relOffset = dataOffset
-  for (let i = 0; i < pageCount; i++) {
-    const blob = xtgBlobs[i]
-    const entryOffset = indexOffset + i * indexEntrySize
-
-    setBigUint64(view, entryOffset, BigInt(relOffset))
-    view.setUint32(entryOffset + 8, blob.byteLength, true)
-    view.setUint16(entryOffset + 12, TARGET_WIDTH, true)
-    view.setUint16(entryOffset + 14, TARGET_HEIGHT, true)
-
-    relOffset += blob.byteLength
-  }
-
-  // Write page data
-  let writeOffset = dataOffset
-  for (const blob of xtgBlobs) {
-    uint8.set(new Uint8Array(blob), writeOffset)
-    writeOffset += blob.byteLength
-  }
-
-  return buffer
-}
-
-/**
- * Helper to set 64-bit unsigned integer (little-endian)
- */
-function setBigUint64(view: DataView, offset: number, value: bigint): void {
-  const low = Number(value & 0xFFFFFFFFn)
-  const high = Number(value >> 32n)
-  view.setUint32(offset, low, true)
-  view.setUint32(offset + 4, high, true)
 }
 
 /**

@@ -9,7 +9,7 @@ function VideoPage() {
   return (
     <ConverterPage
       fileType="video"
-      notice="Extract frames from video files and convert them to XTC for animated reading sequences."
+      notice="Extract frames from video files and convert them to XTC or XTCH for animated reading sequences."
     />
   )
 }

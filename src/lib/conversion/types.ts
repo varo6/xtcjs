@@ -2,6 +2,7 @@ export interface ConversionOptions {
   device: 'X4' | 'X3'
   splitMode: string
   dithering: string
+  is2bit: boolean
   contrast: number
   horizontalMargin: number
   verticalMargin: number
