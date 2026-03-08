@@ -12,6 +12,9 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
   const isImageMode = fileType === 'image'
   const isVideoMode = fileType === 'video'
   const supportsSplit = !isImageMode && !isVideoMode && options.orientation === 'landscape'
+  const showPageOverview = supportsSplit &&
+    options.splitMode !== 'nosplit' &&
+    (fileType === 'cbz' || fileType === 'pdf')
 
   return (
     <div className="options-stack">
@@ -118,11 +121,26 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
             <select
               id="splitMode"
               value={options.splitMode}
-              onChange={(e) => onChange({ ...options, splitMode: e.target.value })}
+              onChange={(e) => onChange({ ...options, splitMode: e.target.value as ConversionOptions['splitMode'] })}
             >
               <option value="overlap">Overlapping thirds</option>
               <option value="split">Split in half</option>
               <option value="nosplit">No split</option>
+            </select>
+          </div>
+        )}
+
+        {showPageOverview && (
+          <div className="option">
+            <label htmlFor="pageOverview">Page Overview</label>
+            <select
+              id="pageOverview"
+              value={options.pageOverview}
+              onChange={(e) => onChange({ ...options, pageOverview: e.target.value as ConversionOptions['pageOverview'] })}
+            >
+              <option value="none">None</option>
+              <option value="portrait">Portrait</option>
+              <option value="landscape">Landscape</option>
             </select>
           </div>
         )}

@@ -38,6 +38,10 @@ const DEVICE_DIMENSIONS = {
   X3: { width: 528, height: 792 }
 } as const
 
+function getPageName(pageNum: number, suffix: string): string {
+  return `${String(pageNum).padStart(4, '0')}_${suffix}.png`
+}
+
 function getTargetDimensions(options: ConversionOptions): { width: number; height: number } {
   return DEVICE_DIMENSIONS[options.device] ?? DEVICE_DIMENSIONS.X4
 }
@@ -150,6 +154,35 @@ async function buildWorkerPage(
   }
 }
 
+async function buildOverviewWorkerPage(
+  baseCanvas: OffscreenCanvas,
+  pageNum: number,
+  options: ConversionOptions,
+  landscapeRotation: number,
+  includePreview: boolean,
+  targetWidth: number,
+  targetHeight: number
+): Promise<WorkerPageResult> {
+  const overviewCanvas = options.pageOverview === 'portrait'
+    ? resizeWithPadding(baseCanvas, 255, targetWidth, targetHeight)
+    : resizeWithPadding(rotateCanvas(baseCanvas, landscapeRotation), 255, targetWidth, targetHeight)
+
+  applyDithering(
+    asCanvas2d(overviewCanvas.getContext('2d', { alpha: false })!),
+    targetWidth,
+    targetHeight,
+    options.dithering
+  )
+
+  return buildWorkerPage(
+    getPageName(pageNum, `1_overview_${options.pageOverview}`),
+    overviewCanvas,
+    includePreview,
+    targetWidth,
+    targetHeight
+  )
+}
+
 async function processBitmap(
   source: ImageBitmap,
   pageNum: number,
@@ -188,7 +221,7 @@ async function processBitmap(
       options.dithering
     )
     results.push(await buildWorkerPage(
-      `${String(pageNum).padStart(4, '0')}_0_page.png`,
+      getPageName(pageNum, '0_page'),
       finalCanvas,
       includePreview,
       targetWidth,
@@ -202,6 +235,19 @@ async function processBitmap(
   let previewAssigned = false
 
   if (shouldSplit) {
+    if (options.pageOverview !== 'none') {
+      results.push(await buildOverviewWorkerPage(
+        baseCanvas,
+        pageNum,
+        options,
+        landscapeRotation,
+        includePreview && !previewAssigned,
+        targetWidth,
+        targetHeight
+      ))
+      previewAssigned = true
+    }
+
     if (options.splitMode === 'overlap') {
       const segments = calculateOverlapSegments(width, height)
       for (let idx = 0; idx < segments.length; idx++) {
@@ -217,7 +263,7 @@ async function processBitmap(
         )
 
         results.push(await buildWorkerPage(
-          `${String(pageNum).padStart(4, '0')}_3_${letter}.png`,
+          getPageName(pageNum, `3_${letter}`),
           finalCanvas,
           includePreview && !previewAssigned,
           targetWidth,
@@ -237,7 +283,7 @@ async function processBitmap(
         options.dithering
       )
       results.push(await buildWorkerPage(
-        `${String(pageNum).padStart(4, '0')}_2_a.png`,
+        getPageName(pageNum, '2_a'),
         topFinal,
         includePreview && !previewAssigned,
         targetWidth,
@@ -254,7 +300,7 @@ async function processBitmap(
         options.dithering
       )
       results.push(await buildWorkerPage(
-        `${String(pageNum).padStart(4, '0')}_2_b.png`,
+        getPageName(pageNum, '2_b'),
         bottomFinal,
         includePreview && !previewAssigned,
         targetWidth,
@@ -271,7 +317,7 @@ async function processBitmap(
       options.dithering
     )
     results.push(await buildWorkerPage(
-      `${String(pageNum).padStart(4, '0')}_0_spread.png`,
+      getPageName(pageNum, '0_spread'),
       finalCanvas,
       includePreview,
       targetWidth,

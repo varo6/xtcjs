@@ -1,6 +1,10 @@
+export type SplitMode = 'overlap' | 'split' | 'nosplit'
+export type PageOverviewMode = 'none' | 'portrait' | 'landscape'
+
 export interface ConversionOptions {
   device: 'X4' | 'X3'
-  splitMode: string
+  splitMode: SplitMode
+  pageOverview: PageOverviewMode
   dithering: string
   contrast: number
   horizontalMargin: number

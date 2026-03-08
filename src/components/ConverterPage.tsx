@@ -124,6 +124,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
   const [options, setOptions] = useState<ConversionOptions>({
     device: 'X4',
     splitMode: (fileType === 'image' || fileType === 'video') ? 'nosplit' : 'overlap',
+    pageOverview: 'none',
     dithering: fileType === 'pdf' ? 'atkinson' : 'floyd',
     contrast: fileType === 'pdf' ? 8 : 4,
     horizontalMargin: 0,

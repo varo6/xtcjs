@@ -40,6 +40,26 @@ interface CropRect {
   height: number
 }
 
+function buildOverviewPage(
+  canvas: HTMLCanvasElement,
+  pageNum: number,
+  targetWidth: number,
+  targetHeight: number,
+  options: ConversionOptions,
+  landscapeRotation: number
+): ProcessedPage {
+  const overviewCanvas = options.pageOverview === 'portrait'
+    ? resizeWithPadding(canvas, 255, targetWidth, targetHeight)
+    : resizeWithPadding(rotateCanvas(canvas, landscapeRotation), 255, targetWidth, targetHeight)
+
+  applyDithering(overviewCanvas.getContext('2d')!, targetWidth, targetHeight, options.dithering)
+
+  return {
+    name: `${String(pageNum).padStart(4, '0')}_1_overview_${options.pageOverview}.png`,
+    canvas: overviewCanvas
+  }
+}
+
 function clampMarginPercent(value: number): number {
   if (!Number.isFinite(value)) return 0
   return Math.max(0, Math.min(20, value))
@@ -823,6 +843,10 @@ function processCanvasAsImage(
   const shouldSplit = width < height && options.splitMode !== 'nosplit'
 
   if (shouldSplit) {
+    if (options.pageOverview !== 'none') {
+      results.push(buildOverviewPage(canvas, pageNum, targetWidth, targetHeight, options, landscapeRotation))
+    }
+
     if (options.splitMode === 'overlap') {
       const segments = calculateOverlapSegments(width, height)
       segments.forEach((seg, idx) => {
@@ -949,6 +973,10 @@ function processLoadedImage(
   const shouldSplit = width < height && options.splitMode !== 'nosplit'
 
   if (shouldSplit) {
+    if (options.pageOverview !== 'none') {
+      results.push(buildOverviewPage(canvas, pageNum, targetWidth, targetHeight, options, landscapeRotation))
+    }
+
     if (options.splitMode === 'overlap') {
       const segments = calculateOverlapSegments(width, height)
       segments.forEach((seg, idx) => {
