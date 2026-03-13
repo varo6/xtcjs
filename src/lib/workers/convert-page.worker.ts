@@ -211,6 +211,7 @@ async function processBitmap(
   }
 
   toGrayscale(asCanvas2d(baseCtx), width, height)
+  
 
   if (options.orientation === 'portrait') {
     const finalCanvas = resizeWithPadding(baseCanvas, 255, targetWidth, targetHeight)
@@ -271,7 +272,150 @@ async function processBitmap(
         ))
         previewAssigned = true
       }
-    } else {
+    } else if (options.splitMode === 'quarter') {
+      const colWidth = Math.floor(width / 2)
+      const rowHeight = Math.floor(height / 3)
+
+      // Definimos los 6 segmentos en el orden de lectura deseado:
+      // 1. Sup. Izq -> 2. Sup. Der
+      // 3. Med. Izq -> 4. Med. Der
+      // 5. Inf. Izq -> 6. Inf. Der
+      const segments = [
+        { x: 0,        y: 0,             suffix: '6_a' }, // 1
+        { x: colWidth, y: 0,             suffix: '6_b' }, // 2
+        { x: 0,        y: rowHeight,     suffix: '6_c' }, // 3
+        { x: colWidth, y: rowHeight,     suffix: '6_d' }, // 4
+        { x: 0,        y: rowHeight * 2, suffix: '6_e' }, // 5
+        { x: colWidth, y: rowHeight * 2, suffix: '6_f' }  // 6
+      ]
+
+      for (const seg of segments) {
+        // Extraemos el segmento, lo rotamos para el dispositivo y lo ajustamos
+        const pageCanvas = extractAndRotate(baseCanvas, seg.x, seg.y, colWidth, rowHeight, landscapeRotation)
+        const finalCanvas = resizeWithPadding(pageCanvas, 255, targetWidth, targetHeight)
+        
+        applyDithering(
+          asCanvas2d(finalCanvas.getContext('2d', { alpha: false })!),
+          targetWidth,
+          targetHeight,
+          options.dithering
+        )
+
+        results.push(await buildWorkerPage(
+          getPageName(pageNum, seg.suffix),
+          finalCanvas,
+          includePreview && !previewAssigned,
+          targetWidth,
+          targetHeight
+        ))
+        previewAssigned = true // Solo genera preview para el primer segmento
+      }
+    }else if (options.splitMode === 'euro') {
+      // 1. Definimos los solapamientos (8% vertical, 10% horizontal para texto cómodo)
+      const overlapH = Math.floor(height * 0.08)
+      const overlapW = Math.floor(width * 0.10)
+
+      const colWidth = Math.floor(width / 2)
+      const rowHeight = Math.floor(height / 4) // 4 filas para maximizar tamaño de texto
+
+      // 2. Definimos los 8 segmentos (Lectura en Z: Izq->Der, arriba hacia abajo)
+      const segments = [
+        { x: 0, y: 0, w: colWidth + overlapW, h: rowHeight + overlapH, suffix: '8_a' }, // F1 Izq
+        { x: colWidth - overlapW, y: 0, w: colWidth + overlapW, h: rowHeight + overlapH, suffix: '8_b' }, // F1 Der
+        
+        { x: 0, y: rowHeight - overlapH, w: colWidth + overlapW, h: rowHeight + (overlapH * 2), suffix: '8_c' }, // F2 Izq
+        { x: colWidth - overlapW, y: rowHeight - overlapH, w: colWidth + overlapW, h: rowHeight + (overlapH * 2), suffix: '8_d' }, // F2 Der
+        
+        { x: 0, y: (rowHeight * 2) - overlapH, w: colWidth + overlapW, h: rowHeight + (overlapH * 2), suffix: '8_e' }, // F3 Izq
+        { x: colWidth - overlapW, y: (rowHeight * 2) - overlapH, w: colWidth + overlapW, h: rowHeight + (overlapH * 2), suffix: '8_f' }, // F3 Der
+        
+        { x: 0, y: (rowHeight * 3) - overlapH, w: colWidth + overlapW, h: rowHeight + overlapH, suffix: '8_g' }, // F4 Izq
+        { x: colWidth - overlapW, y: (rowHeight * 3) - overlapH, w: colWidth + overlapW, h: rowHeight + overlapH, suffix: '8_h' }  // F4 Der
+      ]
+
+      for (const seg of segments) {
+        // Aseguramos que no se salga de los bordes reales
+        const sX = Math.max(0, seg.x)
+        const sY = Math.max(0, seg.y)
+        const sW = Math.min(seg.w, width - sX)
+        const sH = Math.min(seg.h, height - sY)
+
+        const pageCanvas = extractAndRotate(baseCanvas, sX, sY, sW, sH, landscapeRotation)
+        const finalCanvas = resizeWithPadding(pageCanvas, 255, targetWidth, targetHeight)
+        
+        applyDithering(
+          asCanvas2d(finalCanvas.getContext('2d', { alpha: false })!),
+          targetWidth,
+          targetHeight,
+          options.dithering
+        )
+
+        results.push(await buildWorkerPage(
+          getPageName(pageNum, seg.suffix),
+          finalCanvas,
+          includePreview && !previewAssigned,
+          targetWidth,
+          targetHeight
+        ))
+        previewAssigned = true
+      }
+    }    else if (options.splitMode === 'euro2') {
+      
+      // 1. Definimos el avance (el salto entre filas)
+      const rows = 4;
+      const rowStride = Math.floor(height / rows);
+      
+      // 2. Definimos el SOLAPAMIENTO (Overlap)
+      // Agregamos un 20% extra al alto para que se encimen las filas
+      const overlapH = Math.floor(rowStride * 0.20);
+      const fixedH = rowStride + overlapH; 
+
+      // 3. Mantenemos el ASPECT RATIO 5:3 para el X4 (800/480)
+      // El ancho DEBE ser proporcional al alto para que no haya bandas negras
+      const fixedW = Math.floor(fixedH * (800 / 480));
+      
+      // El solapamiento horizontal es automático al ser el recorte ancho
+      const letters = 'abcdefgh'; 
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < 2; c++) {
+          const idx = r * 2 + c;
+          
+          // Coordenada Y con el retroceso del overlap (excepto en la primera fila)
+          let y = (r * rowStride) - (r === 0 ? 0 : overlapH / 2);
+          
+          // Coordenada X: Columna 1 a la izq, Columna 2 a la der
+          let x = (c === 0) ? 0 : width - fixedW;
+
+          // Ajustes de seguridad para no salir de la hoja
+          if (y + fixedH > height) y = height - fixedH;
+          if (y < 0) y = 0;
+          if (x < 0) x = 0;
+
+          // Extraemos, rotamos 90° y redimensionamos al X4 (480x800)
+          const pageCanvas = extractAndRotate(baseCanvas, x, y, fixedW, fixedH, landscapeRotation);
+          const finalCanvas = resizeWithPadding(pageCanvas, 255, 480, 800);
+          
+          applyDithering(
+            asCanvas2d(finalCanvas.getContext('2d', { alpha: false })!),
+            480,
+            800,
+            options.dithering
+          );
+
+          results.push(await buildWorkerPage(
+            getPageName(pageNum, `8_${letters[idx]}`),
+            finalCanvas,
+            includePreview && !previewAssigned,
+            480,
+            800
+          ));
+          previewAssigned = true;
+        }
+      }
+    }
+
+	else {
       const halfHeight = Math.floor(height / 2)
 
       const topCanvas = extractAndRotate(baseCanvas, 0, 0, width, halfHeight, landscapeRotation)
