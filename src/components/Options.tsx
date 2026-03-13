@@ -126,6 +126,9 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
               <option value="overlap">Overlapping thirds</option>
               <option value="split">Split in half</option>
               <option value="nosplit">No split</option>
+			  <option value="quarter">quarter</option>
+			  <option value="euro2">euro2</option>
+			  <option value="euro">euro</option>
             </select>
           </div>
         )}
