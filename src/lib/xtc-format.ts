@@ -1,7 +1,7 @@
 // XTC format generation for XTEink X4 e-reader
 
 import type { BookMetadata, TocEntry } from './metadata/types';
-import { imageDataToXtg } from './processing/xtg';
+import { imageDataToXtg, imageDataToXth } from './processing/xtg';
 
 interface ProcessedPage {
   name: string;
@@ -47,8 +47,11 @@ export async function buildXtc(
   pages: ProcessedPage[],
   options: XtcBuildOptions = {}
 ): Promise<ArrayBuffer> {
+  const is2bit = options.is2bit || false
   const xtgBlobs = pages.map(page =>
-    imageDataToXtg(page.canvas.getContext('2d')!.getImageData(0, 0, page.canvas.width, page.canvas.height))
+    is2bit
+      ? imageDataToXth(page.canvas.getContext('2d')!.getImageData(0, 0, page.canvas.width, page.canvas.height))
+      : imageDataToXtg(page.canvas.getContext('2d')!.getImageData(0, 0, page.canvas.width, page.canvas.height))
   );
 
   return buildXtcFromXtgPages(xtgBlobs, options);

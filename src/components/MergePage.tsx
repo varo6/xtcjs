@@ -89,7 +89,7 @@ export function MergePage() {
 
       const type = detectFileType(file)
       if (type === 'unknown') {
-        setTypeError('Unsupported file type. Use CBZ, PDF, or XTC files.')
+        setTypeError('Unsupported file type. Use CBZ, PDF, XTC, or XTCH files.')
         return
       }
 
@@ -318,14 +318,14 @@ export function MergePage() {
                 {mode === 'merge' ? 'Drop files to merge' : 'Drop a file to split'}
               </span>
               <span className="dropzone-secondary">
-                CBZ, PDF, or XTC {mode === 'merge' ? '(same type only)' : ''}
+                CBZ, PDF, or XTC/XTCH {mode === 'merge' ? '(same type only)' : ''}
               </span>
             </div>
           </div>
           <input
             id="merge-file-input"
             type="file"
-            accept=".cbz,.CBZ,.pdf,.PDF,.xtc,.XTC"
+            accept=".cbz,.CBZ,.pdf,.PDF,.xtc,.XTC,.xtch,.XTCH"
             multiple={mode === 'merge'}
             hidden
             onChange={handleFileInput}
@@ -391,7 +391,7 @@ export function MergePage() {
                 value={xtcOutputFormat}
                 onChange={(e) => setXtcOutputFormat(e.target.value as OutputFormat)}
               >
-                <option value="xtc">XTC (E-Reader)</option>
+                <option value="xtc">XTC/XTCH (E-Reader)</option>
                 <option value="cbz">CBZ (Archive)</option>
               </select>
             </div>
@@ -404,7 +404,7 @@ export function MergePage() {
               <div className="output-info">
                 <span className="output-format-badge">CBZ</span>
                 <span className="output-hint">
-                  Move to converter to create XTC
+                  Move to converter to create XTC/XTCH
                 </span>
               </div>
             </div>
@@ -417,7 +417,7 @@ export function MergePage() {
               <div className="output-info">
                 <span className="output-format-badge">PDF</span>
                 <span className="output-hint">
-                  Move to converter to create XTC
+                  Move to converter to create XTC/XTCH
                 </span>
               </div>
             </div>
@@ -599,7 +599,7 @@ export function MergePage() {
                 className="btn-move-converter"
                 onClick={handleMoveToConverter}
               >
-                Convert {selectedResults.length > 1 ? `${selectedResults.length} files` : ''} to XTC
+                Convert {selectedResults.length > 1 ? `${selectedResults.length} files` : ''} to XTC/XTCH
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M5 12h14M12 5l7 7-7 7"/>
                 </svg>

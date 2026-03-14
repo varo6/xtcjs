@@ -1,8 +1,8 @@
 // Split logic for CBZ, PDF, and XTC files
 
 import JSZip from 'jszip'
-import { buildXtc } from './xtc-format'
-import { parseXtcFile } from './xtc-reader'
+import { buildXtc, buildXtcFromBuffers } from './xtc-format'
+import { decodeXtcPageToCanvas, parseXtcFile } from './xtc-reader'
 import { buildCbz, splitPdf, type OutputFormat, detectFileType } from './merge'
 import { loadPdfDocument } from './pdfjs'
 import { TARGET_WIDTH, TARGET_HEIGHT } from './processing/canvas'
@@ -376,8 +376,9 @@ async function splitXtcFile(
 ): Promise<SplitResult[]> {
   const buffer = await file.arrayBuffer()
   const parsed = await parseXtcFile(buffer)
+  const is2bit = parsed.header.is2bit
 
-  const baseName = file.name.replace(/\.xtc$/i, '')
+  const baseName = file.name.replace(/\.xtch?$/i, '')
   const results: SplitResult[] = []
 
   for (let rangeIdx = 0; rangeIdx < ranges.length; rangeIdx++) {
@@ -394,16 +395,16 @@ async function splitXtcFile(
     const rangePages = parsed.pageData.slice(range.start - 1, range.end)
 
     if (outputFormat === 'xtc') {
-      const data = buildXtcFromRawPages(rangePages)
+      const data = await buildXtcFromBuffers(rangePages, { is2bit })
       results.push({
-        name: `${baseName}_part${rangeIdx + 1}.xtc`,
+        name: `${baseName}_part${rangeIdx + 1}.${is2bit ? 'xtch' : 'xtc'}`,
         data,
         size: data.byteLength,
         pageCount: rangePages.length,
       })
     } else {
       // Decode to CBZ
-      const canvases = rangePages.map(data => decodeXtgToCanvas(data))
+      const canvases = rangePages.map(data => decodeXtcPageToCanvas(data))
       const images = canvases.map((canvas, i) => ({
         name: `${String(i + 1).padStart(5, '0')}.png`,
         blob: dataURLtoBlob(canvas.toDataURL('image/png')),
@@ -427,98 +428,6 @@ async function splitXtcFile(
   }
 
   return results
-}
-
-/**
- * Decode XTG to canvas (inline to avoid import cycle)
- */
-function decodeXtgToCanvas(xtgBuffer: ArrayBuffer): HTMLCanvasElement {
-  const view = new DataView(xtgBuffer)
-  const uint8 = new Uint8Array(xtgBuffer)
-
-  const width = view.getUint16(4, true)
-  const height = view.getUint16(6, true)
-  const pixelDataSize = view.getUint32(10, true)
-
-  const headerSize = 22
-  const pixelData = new Uint8Array(xtgBuffer, headerSize, pixelDataSize)
-
-  const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-  const ctx = canvas.getContext('2d')!
-
-  const imageData = ctx.createImageData(width, height)
-  const data = imageData.data
-
-  const rowBytes = Math.ceil(width / 8)
-
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const byteIndex = y * rowBytes + Math.floor(x / 8)
-      const bitIndex = 7 - (x % 8)
-      const bit = (pixelData[byteIndex] >> bitIndex) & 1
-
-      const idx = (y * width + x) * 4
-      const color = bit ? 255 : 0
-      data[idx] = color
-      data[idx + 1] = color
-      data[idx + 2] = color
-      data[idx + 3] = 255
-    }
-  }
-
-  ctx.putImageData(imageData, 0, 0)
-  return canvas
-}
-
-/**
- * Build XTC from raw XTG page data
- */
-function buildXtcFromRawPages(xtgBlobs: ArrayBuffer[]): ArrayBuffer {
-  const pageCount = xtgBlobs.length
-  const headerSize = 48
-  const indexEntrySize = 16
-  const indexOffset = headerSize
-  const dataOffset = indexOffset + pageCount * indexEntrySize
-
-  let totalSize = dataOffset
-  for (const blob of xtgBlobs) totalSize += blob.byteLength
-
-  const buffer = new ArrayBuffer(totalSize)
-  const view = new DataView(buffer)
-  const uint8 = new Uint8Array(buffer)
-
-  uint8[0] = 0x58; uint8[1] = 0x54; uint8[2] = 0x43; uint8[3] = 0x00
-  view.setUint16(4, 1, true)
-  view.setUint16(6, pageCount, true)
-
-  setBigUint64(view, 24, BigInt(indexOffset))
-  setBigUint64(view, 32, BigInt(dataOffset))
-
-  let relOffset = dataOffset
-  for (let i = 0; i < pageCount; i++) {
-    const blob = xtgBlobs[i]
-    const entryOffset = indexOffset + i * indexEntrySize
-    setBigUint64(view, entryOffset, BigInt(relOffset))
-    view.setUint32(entryOffset + 8, blob.byteLength, true)
-    view.setUint16(entryOffset + 12, TARGET_WIDTH, true)
-    view.setUint16(entryOffset + 14, TARGET_HEIGHT, true)
-    relOffset += blob.byteLength
-  }
-
-  let writeOffset = dataOffset
-  for (const blob of xtgBlobs) {
-    uint8.set(new Uint8Array(blob), writeOffset)
-    writeOffset += blob.byteLength
-  }
-
-  return buffer
-}
-
-function setBigUint64(view: DataView, offset: number, value: bigint): void {
-  view.setUint32(offset, Number(value & 0xFFFFFFFFn), true)
-  view.setUint32(offset + 4, Number(value >> 32n), true)
 }
 
 async function blobsToCanvases(blobs: Blob[]): Promise<HTMLCanvasElement[]> {
