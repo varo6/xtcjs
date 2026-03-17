@@ -6,6 +6,7 @@ export interface ConversionOptions {
   splitMode: SplitMode
   pageOverview: PageOverviewMode
   dithering: string
+  is2bit: boolean
   contrast: number
   horizontalMargin: number
   verticalMargin: number

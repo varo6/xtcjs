@@ -9,7 +9,7 @@ function ImagePage() {
   return (
     <ConverterPage
       fileType="image"
-      notice="Convert image files to XTC with dedicated scaling modes for wallpapers and covers."
+      notice="Convert image files to XTC or XTCH with dedicated scaling modes for wallpapers and covers."
     />
   )
 }

@@ -97,6 +97,20 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
           </div>
         )}
 
+        {isImageMode && (
+          <div className="option option-checkbox">
+            <label htmlFor="is2bit" className="checkbox-label">
+              <input
+                type="checkbox"
+                id="is2bit"
+                checked={options.is2bit}
+                onChange={(e) => onChange({ ...options, is2bit: e.target.checked })}
+              />
+              <span>Use XTCH 2-bit grayscale output</span>
+            </label>
+          </div>
+        )}
+
         {isVideoMode && (
           <div className="option">
             <label htmlFor="videoFps">Video FPS</label>
