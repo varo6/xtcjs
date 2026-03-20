@@ -4,7 +4,7 @@ import JSZip from 'jszip'
 import { createExtractorFromData } from 'node-unrar-js'
 import unrarWasm from 'node-unrar-js/esm/js/unrar.wasm?url'
 import { applyDithering } from './processing/dithering'
-import { toGrayscale, applyContrast, calculateOverlapSegments } from './processing/image'
+import { toGrayscale, applyContrast, calculateOverlapSegments, calculateFourWaySegments } from './processing/image'
 import { rotateCanvas, extractAndRotate, resizeWithPadding, getTargetDimensions } from './processing/canvas'
 import { imageDataToXtg, imageDataToXth } from './processing/xtg'
 import { buildXtcFromXtgPages } from './xtc-format'
@@ -882,6 +882,19 @@ function processCanvasAsImage(
           canvas: finalCanvas
         })
       })
+    } else if (options.splitMode === 'fourway') {
+      const segments = calculateFourWaySegments(width, height)
+      segments.forEach((seg, idx) => {
+        const letter = String.fromCharCode(97 + idx)
+        const pageCanvas = extractAndRotate(canvas, seg.x, seg.y, seg.w, seg.h, landscapeRotation)
+        const finalCanvas = resizeWithPadding(pageCanvas, 255, targetWidth, targetHeight)
+        applyDithering(finalCanvas.getContext('2d')!, targetWidth, targetHeight, options.dithering)
+
+        results.push({
+          name: `${String(pageNum).padStart(4, '0')}_4_${letter}.png`,
+          canvas: finalCanvas
+        })
+      })
     } else {
       const halfHeight = Math.floor(height / 2)
 
@@ -1011,6 +1024,19 @@ function processLoadedImage(
 
         results.push({
           name: `${String(pageNum).padStart(4, '0')}_3_${letter}.png`,
+          canvas: finalCanvas
+        })
+      })
+    } else if (options.splitMode === 'fourway') {
+      const segments = calculateFourWaySegments(width, height)
+      segments.forEach((seg, idx) => {
+        const letter = String.fromCharCode(97 + idx)
+        const pageCanvas = extractAndRotate(canvas, seg.x, seg.y, seg.w, seg.h, landscapeRotation)
+        const finalCanvas = resizeWithPadding(pageCanvas, 255, targetWidth, targetHeight)
+        applyDithering(finalCanvas.getContext('2d')!, targetWidth, targetHeight, options.dithering, is2bit)
+
+        results.push({
+          name: `${String(pageNum).padStart(4, '0')}_4_${letter}.png`,
           canvas: finalCanvas
         })
       })

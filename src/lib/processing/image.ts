@@ -118,3 +118,23 @@ export function calculateOverlapSegments(
 
   return segments;
 }
+
+/**
+ * Split a page into four reading-order quadrants for two-column layouts.
+ */
+export function calculateFourWaySegments(
+  width: number,
+  height: number
+): Array<{ x: number; y: number; w: number; h: number }> {
+  const halfWidth = Math.floor(width / 2)
+  const rightWidth = width - halfWidth
+  const halfHeight = Math.floor(height / 2)
+  const bottomHeight = height - halfHeight
+
+  return [
+    { x: 0, y: 0, w: halfWidth, h: halfHeight },
+    { x: 0, y: halfHeight, w: halfWidth, h: bottomHeight },
+    { x: halfWidth, y: 0, w: rightWidth, h: halfHeight },
+    { x: halfWidth, y: halfHeight, w: rightWidth, h: bottomHeight }
+  ]
+}
