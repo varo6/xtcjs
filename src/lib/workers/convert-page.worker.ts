@@ -1,5 +1,5 @@
 import { applyDithering } from '../processing/dithering'
-import { applyContrast, calculateOverlapSegments, toGrayscale } from '../processing/image'
+import { applyContrast, calculateFourWaySegments, calculateOverlapSegments, toGrayscale } from '../processing/image'
 import { imageDataToXtg } from '../processing/xtg'
 import type { ConversionOptions } from '../conversion/types'
 
@@ -264,6 +264,29 @@ async function processBitmap(
 
         results.push(await buildWorkerPage(
           getPageName(pageNum, `3_${letter}`),
+          finalCanvas,
+          includePreview && !previewAssigned,
+          targetWidth,
+          targetHeight
+        ))
+        previewAssigned = true
+      }
+    } else if (options.splitMode === 'fourway') {
+      const segments = calculateFourWaySegments(width, height)
+      for (let idx = 0; idx < segments.length; idx++) {
+        const seg = segments[idx]
+        const letter = String.fromCharCode(97 + idx)
+        const pageCanvas = extractAndRotate(baseCanvas, seg.x, seg.y, seg.w, seg.h, landscapeRotation)
+        const finalCanvas = resizeWithPadding(pageCanvas, 255, targetWidth, targetHeight)
+        applyDithering(
+          asCanvas2d(finalCanvas.getContext('2d', { alpha: false })!),
+          targetWidth,
+          targetHeight,
+          options.dithering
+        )
+
+        results.push(await buildWorkerPage(
+          getPageName(pageNum, `4_${letter}`),
           finalCanvas,
           includePreview && !previewAssigned,
           targetWidth,
