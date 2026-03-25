@@ -1,4 +1,4 @@
-export type SplitMode = 'overlap' | 'split' | 'nosplit'
+export type SplitMode = 'overlap' | 'split' | 'nosplit' | 'quarter' | 'euro2' | 'euro'
 export type PageOverviewMode = 'none' | 'portrait' | 'landscape'
 
 export interface ConversionOptions {
