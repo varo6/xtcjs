@@ -1,5 +1,12 @@
 // Image processing functions for manga optimization
 
+interface ContentBounds {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 /**
  * Convert image to grayscale using luminosity method
  */
@@ -117,4 +124,73 @@ export function calculateOverlapSegments(
   }
 
   return segments;
+}
+
+/**
+ * Find the tight bounds around non-white content in a grayscale image.
+ */
+export function findContentBounds(
+  imageData: ImageData,
+  whiteThreshold = 245
+): ContentBounds | null {
+  const { data, width, height } = imageData
+  let minX = width
+  let minY = height
+  let maxX = -1
+  let maxY = -1
+
+  for (let y = 0; y < height; y++) {
+    const rowOffset = y * width * 4
+    for (let x = 0; x < width; x++) {
+      const pixelOffset = rowOffset + x * 4
+      if (data[pixelOffset] >= whiteThreshold) {
+        continue
+      }
+
+      minX = Math.min(minX, x)
+      minY = Math.min(minY, y)
+      maxX = Math.max(maxX, x)
+      maxY = Math.max(maxY, y)
+    }
+  }
+
+  if (maxX < 0 || maxY < 0) {
+    return null
+  }
+
+  const contentWidth = maxX - minX + 1
+  const contentHeight = maxY - minY + 1
+  const padX = Math.max(4, Math.floor(contentWidth * 0.04))
+  const padY = Math.max(4, Math.floor(contentHeight * 0.04))
+  const x = Math.max(0, minX - padX)
+  const y = Math.max(0, minY - padY)
+  const right = Math.min(width, maxX + padX + 1)
+  const bottom = Math.min(height, maxY + padY + 1)
+
+  return {
+    x,
+    y,
+    width: Math.max(1, right - x),
+    height: Math.max(1, bottom - y)
+  }
+}
+
+/**
+ * Split a page into four reading-order quadrants for two-column layouts.
+ */
+export function calculateFourWaySegments(
+  width: number,
+  height: number
+): Array<{ x: number; y: number; w: number; h: number }> {
+  const halfWidth = Math.floor(width / 2)
+  const rightWidth = width - halfWidth
+  const halfHeight = Math.floor(height / 2)
+  const bottomHeight = height - halfHeight
+
+  return [
+    { x: 0, y: 0, w: halfWidth, h: halfHeight },
+    { x: 0, y: halfHeight, w: halfWidth, h: bottomHeight },
+    { x: halfWidth, y: 0, w: rightWidth, h: halfHeight },
+    { x: halfWidth, y: halfHeight, w: rightWidth, h: bottomHeight }
+  ]
 }

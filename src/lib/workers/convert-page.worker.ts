@@ -1,5 +1,5 @@
 import { applyDithering } from '../processing/dithering'
-import { applyContrast, calculateOverlapSegments, toGrayscale } from '../processing/image'
+import { applyContrast, calculateFourWaySegments, calculateOverlapSegments, findContentBounds, toGrayscale } from '../processing/image'
 import { imageDataToXtg } from '../processing/xtg'
 import type { ConversionOptions } from '../conversion/types'
 
@@ -101,6 +101,32 @@ function extractAndRotate(
   const ctx = extract.getContext('2d', { alpha: false })!
   ctx.drawImage(source, x, y, w, h, 0, 0, w, h)
   return rotateCanvas(extract, degrees)
+}
+
+function extractRegion(
+  source: OffscreenCanvas,
+  x: number,
+  y: number,
+  w: number,
+  h: number
+): OffscreenCanvas {
+  const extract = new OffscreenCanvas(w, h)
+  const ctx = extract.getContext('2d', { alpha: false })!
+  ctx.drawImage(source, x, y, w, h, 0, 0, w, h)
+  return extract
+}
+
+function trimCanvasToContent(canvas: OffscreenCanvas): OffscreenCanvas {
+  const ctx = canvas.getContext('2d', { alpha: false })
+  if (!ctx) return canvas
+
+  const bounds = findContentBounds(ctx.getImageData(0, 0, canvas.width, canvas.height))
+  if (!bounds) return canvas
+  if (bounds.width === canvas.width && bounds.height === canvas.height && bounds.x === 0 && bounds.y === 0) {
+    return canvas
+  }
+
+  return extractRegion(canvas, bounds.x, bounds.y, bounds.width, bounds.height)
 }
 
 function resizeWithPadding(
@@ -264,6 +290,31 @@ async function processBitmap(
 
         results.push(await buildWorkerPage(
           getPageName(pageNum, `3_${letter}`),
+          finalCanvas,
+          includePreview && !previewAssigned,
+          targetWidth,
+          targetHeight
+        ))
+        previewAssigned = true
+      }
+    } else if (options.splitMode === 'fourway') {
+      const segments = calculateFourWaySegments(width, height)
+      for (let idx = 0; idx < segments.length; idx++) {
+        const seg = segments[idx]
+        const letter = String.fromCharCode(97 + idx)
+        const segmentCanvas = extractRegion(baseCanvas, seg.x, seg.y, seg.w, seg.h)
+        const trimmedSegment = trimCanvasToContent(segmentCanvas)
+        const pageCanvas = rotateCanvas(trimmedSegment, landscapeRotation)
+        const finalCanvas = resizeWithPadding(pageCanvas, 255, targetWidth, targetHeight)
+        applyDithering(
+          asCanvas2d(finalCanvas.getContext('2d', { alpha: false })!),
+          targetWidth,
+          targetHeight,
+          options.dithering
+        )
+
+        results.push(await buildWorkerPage(
+          getPageName(pageNum, `4_${letter}`),
           finalCanvas,
           includePreview && !previewAssigned,
           targetWidth,

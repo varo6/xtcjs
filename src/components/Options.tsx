@@ -139,6 +139,9 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
             >
               <option value="overlap">Overlapping thirds</option>
               <option value="split">Split in half</option>
+              {fileType === 'pdf' && (
+                <option value="fourway">Split by columns (4-way)</option>
+              )}
               <option value="nosplit">No split</option>
             </select>
           </div>

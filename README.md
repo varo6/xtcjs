@@ -118,7 +118,7 @@ Your content is automatically processed for the best e-ink reading experience:
 <details>
 <summary><b>Why are my pages split in half?</b></summary>
 
-The XTEink X4 has a portrait screen. When you convert landscape images (like two-page manga spreads), XTC.js splits them so you can read each page comfortably. Use "No split" if you prefer full spreads.
+The XTEink X4 has a portrait screen. When you convert landscape images (like two-page manga spreads), XTC.js splits them so you can read each page comfortably. Use "No split" if you prefer full spreads. PDFs also support a "Split by columns (4-way)" option for two-column layouts.
 </details>
 
 <details>
@@ -155,4 +155,3 @@ bun run dev      # Dev server → localhost:5173
 bun run build    # Production build
 bun run serve    # Production server → localhost:3000
 ```
-

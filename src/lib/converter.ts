@@ -4,8 +4,8 @@ import JSZip from 'jszip'
 import { createExtractorFromData } from 'node-unrar-js'
 import unrarWasm from 'node-unrar-js/esm/js/unrar.wasm?url'
 import { applyDithering } from './processing/dithering'
-import { toGrayscale, applyContrast, calculateOverlapSegments } from './processing/image'
-import { rotateCanvas, extractAndRotate, resizeWithPadding, getTargetDimensions } from './processing/canvas'
+import { toGrayscale, applyContrast, calculateOverlapSegments, calculateFourWaySegments, findContentBounds } from './processing/image'
+import { rotateCanvas, extractAndRotate, extractRegion, resizeWithPadding, getTargetDimensions } from './processing/canvas'
 import { imageDataToXtg, imageDataToXth } from './processing/xtg'
 import { buildXtcFromXtgPages } from './xtc-format'
 import { extractPdfMetadata } from './metadata/pdf-outline'
@@ -58,6 +58,19 @@ function buildOverviewPage(
     name: `${String(pageNum).padStart(4, '0')}_1_overview_${options.pageOverview}.png`,
     canvas: overviewCanvas
   }
+}
+
+function trimCanvasToContent(canvas: HTMLCanvasElement): HTMLCanvasElement {
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return canvas
+
+  const bounds = findContentBounds(ctx.getImageData(0, 0, canvas.width, canvas.height))
+  if (!bounds) return canvas
+  if (bounds.width === canvas.width && bounds.height === canvas.height && bounds.x === 0 && bounds.y === 0) {
+    return canvas
+  }
+
+  return extractRegion(canvas, bounds.x, bounds.y, bounds.width, bounds.height)
 }
 
 function clampMarginPercent(value: number): number {
@@ -882,6 +895,21 @@ function processCanvasAsImage(
           canvas: finalCanvas
         })
       })
+    } else if (options.splitMode === 'fourway') {
+      const segments = calculateFourWaySegments(width, height)
+      segments.forEach((seg, idx) => {
+        const letter = String.fromCharCode(97 + idx)
+        const segmentCanvas = extractRegion(canvas, seg.x, seg.y, seg.w, seg.h)
+        const trimmedSegment = trimCanvasToContent(segmentCanvas)
+        const pageCanvas = rotateCanvas(trimmedSegment, landscapeRotation)
+        const finalCanvas = resizeWithPadding(pageCanvas, 255, targetWidth, targetHeight)
+        applyDithering(finalCanvas.getContext('2d')!, targetWidth, targetHeight, options.dithering)
+
+        results.push({
+          name: `${String(pageNum).padStart(4, '0')}_4_${letter}.png`,
+          canvas: finalCanvas
+        })
+      })
     } else {
       const halfHeight = Math.floor(height / 2)
 
@@ -1011,6 +1039,21 @@ function processLoadedImage(
 
         results.push({
           name: `${String(pageNum).padStart(4, '0')}_3_${letter}.png`,
+          canvas: finalCanvas
+        })
+      })
+    } else if (options.splitMode === 'fourway') {
+      const segments = calculateFourWaySegments(width, height)
+      segments.forEach((seg, idx) => {
+        const letter = String.fromCharCode(97 + idx)
+        const segmentCanvas = extractRegion(canvas, seg.x, seg.y, seg.w, seg.h)
+        const trimmedSegment = trimCanvasToContent(segmentCanvas)
+        const pageCanvas = rotateCanvas(trimmedSegment, landscapeRotation)
+        const finalCanvas = resizeWithPadding(pageCanvas, 255, targetWidth, targetHeight)
+        applyDithering(finalCanvas.getContext('2d')!, targetWidth, targetHeight, options.dithering, is2bit)
+
+        results.push({
+          name: `${String(pageNum).padStart(4, '0')}_4_${letter}.png`,
           canvas: finalCanvas
         })
       })
