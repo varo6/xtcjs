@@ -131,6 +131,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     horizontalMargin: 0,
     verticalMargin: 0,
     orientation: (fileType === 'image' || fileType === 'video') ? 'portrait' : 'landscape',
+    coverPortrait: false,
     landscapeFlipClockwise: false,
     showProgressPreview: true,
     imageMode: fileType === 'image' ? 'cover' : 'letterbox',

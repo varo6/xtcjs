@@ -12,6 +12,7 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
   const isImageMode = fileType === 'image'
   const isVideoMode = fileType === 'video'
   const supportsSplit = !isImageMode && !isVideoMode && options.orientation === 'landscape'
+  const supportsCoverPortrait = !isImageMode && !isVideoMode && options.orientation === 'landscape'
   const showPageOverview = supportsSplit &&
     options.splitMode !== 'nosplit' &&
     (fileType === 'cbz' || fileType === 'pdf')
@@ -77,6 +78,20 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
                 onChange={(e) => onChange({ ...options, landscapeFlipClockwise: e.target.checked })}
               />
               <span>Flip landscape clockwise</span>
+            </label>
+          </div>
+        )}
+
+        {supportsCoverPortrait && (
+          <div className="option option-checkbox">
+            <label htmlFor="coverPortrait" className="checkbox-label">
+              <input
+                type="checkbox"
+                id="coverPortrait"
+                checked={options.coverPortrait}
+                onChange={(e) => onChange({ ...options, coverPortrait: e.target.checked })}
+              />
+              <span>Keep cover portrait</span>
             </label>
           </div>
         )}
