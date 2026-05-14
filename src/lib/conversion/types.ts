@@ -11,6 +11,7 @@ export interface ConversionOptions {
   horizontalMargin: number
   verticalMargin: number
   orientation: 'landscape' | 'portrait'
+  coverPortrait: boolean
   landscapeFlipClockwise: boolean
   showProgressPreview: boolean
   imageMode: 'cover' | 'letterbox' | 'fill' | 'crop'

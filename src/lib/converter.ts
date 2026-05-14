@@ -150,11 +150,22 @@ function getPageProcessingOptions(
   baseOptions: ConversionOptions,
   isCoverPage: boolean
 ): ConversionOptions {
-  // Crosspoint uses XTC page 0 as the home preview, so keep cover full-size.
-  if (!isCoverPage || baseOptions.splitMode === 'nosplit') {
+  if (!isCoverPage) {
     return baseOptions
   }
-  return { ...baseOptions, splitMode: 'nosplit' }
+
+  let coverOptions = baseOptions
+
+  // Crosspoint uses XTC page 0 as the home preview, so keep cover full-size.
+  if (coverOptions.splitMode !== 'nosplit') {
+    coverOptions = { ...coverOptions, splitMode: 'nosplit' }
+  }
+
+  if (coverOptions.coverPortrait && coverOptions.orientation === 'landscape') {
+    coverOptions = { ...coverOptions, orientation: 'portrait' }
+  }
+
+  return coverOptions
 }
 
 function getOutputDimensions(options: ConversionOptions): { width: number; height: number } {
