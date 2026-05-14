@@ -114,6 +114,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
   const [progressText, setProgressText] = useState('Processing...')
   const [isDownloadAllLoading, setIsDownloadAllLoading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewError, setPreviewError] = useState<string | null>(null)
   const [viewerPages, setViewerPages] = useState<string[]>([])
   const progressPreviewRef = useRef<string | null>(null)
   const pendingProgressRef = useRef<number | null>(null)
@@ -197,6 +198,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
 
     setIsConverting(true)
     await clearSession() // Clear previous session results
+    setPreviewError(null)
     setProgress(0)
     setProgressText('Processing...')
     if (progressPreviewRef.current && progressPreviewRef.current.startsWith('blob:')) {
@@ -270,35 +272,41 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
   }, [selectedFiles, fileType, options, addResult, clearSession, scheduleProgressUiFlush])
 
   const handlePreview = useCallback(async (result: StoredResult) => {
-    const cached = previewCacheRef.current.get(result.id)
-    if (cached && cached.length > 0) {
-      setViewerPages(cached)
-      return
-    }
+    try {
+      setPreviewError(null)
 
-    const images = await getPreviewImages(result)
-    if (images.length > 0) {
-      previewCacheRef.current.set(result.id, images)
-      setViewerPages(images)
-      return
-    }
+      const cached = previewCacheRef.current.get(result.id)
+      if (cached && cached.length > 0) {
+        setViewerPages(cached)
+        return
+      }
 
-    const data = await getResultData(result)
-    if (!data || data.byteLength === 0) {
+      const images = await getPreviewImages(result)
       if (images.length > 0) {
         previewCacheRef.current.set(result.id, images)
         setViewerPages(images)
+        return
       }
-      return
-    }
 
-    const decodeLimit = result.pageCount > MAX_FALLBACK_PREVIEW_PAGES
-      ? MAX_FALLBACK_PREVIEW_PAGES
-      : undefined
-    const canvases = await extractXtcPages(data, decodeLimit)
-    const decodedImages = canvases.map((canvas) => canvas.toDataURL('image/png'))
-    previewCacheRef.current.set(result.id, decodedImages)
-    setViewerPages(decodedImages)
+      const data = await getResultData(result)
+      if (!data || data.byteLength === 0) {
+        setPreviewError('Preview data is not available for this file.')
+        return
+      }
+
+      const decodeLimit = result.pageCount > MAX_FALLBACK_PREVIEW_PAGES
+        ? MAX_FALLBACK_PREVIEW_PAGES
+        : undefined
+      const canvases = await extractXtcPages(data, decodeLimit)
+      const decodedImages = canvases.map((canvas) => canvas.toDataURL('image/png'))
+      previewCacheRef.current.set(result.id, decodedImages)
+      setViewerPages(decodedImages)
+    } catch (err) {
+      console.error('Preview failed:', err)
+      setPreviewError(
+        normalizeUserErrorMessage(err instanceof Error ? err.message : 'Failed to generate preview')
+      )
+    }
   }, [getPreviewImages, getResultData])
 
   const handleCloseViewer = useCallback(() => {
@@ -398,6 +406,12 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
       {transferNotice && (
         <div className="transfer-notice">
           <p>{transferNotice}</p>
+        </div>
+      )}
+
+      {previewError && (
+        <div className="transfer-notice">
+          <p>Preview failed: {previewError}</p>
         </div>
       )}
 

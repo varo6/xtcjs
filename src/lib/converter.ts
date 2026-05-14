@@ -334,8 +334,7 @@ async function processArchiveSourcePages(
 
       const pageOptions = getPageOptions(index)
       const pageNum = index + 1
-      const includePreview = pageOptions.showProgressPreview &&
-        sampledPreviews.length < MAX_STORED_PREVIEWS &&
+      const includePreview = sampledPreviews.length < MAX_STORED_PREVIEWS &&
         shouldGenerateSampledPreview(pageNum, totalPages)
       const imgBlob = await getBlob(index)
 
@@ -352,7 +351,9 @@ async function processArchiveSourcePages(
             const previewBytes = workerPages.find((page) => page.previewJpeg)?.previewJpeg
             if (previewBytes) {
               const previewBlob = new Blob([previewBytes], { type: 'image/jpeg' })
-              previewForProgress = URL.createObjectURL(previewBlob)
+              if (pageOptions.showProgressPreview) {
+                previewForProgress = URL.createObjectURL(previewBlob)
+              }
               if (sampledPreviews.length < MAX_STORED_PREVIEWS) {
                 previewForStorage = await blobToDataUrl(previewBlob)
               }
@@ -373,7 +374,9 @@ async function processArchiveSourcePages(
 
         if (includePreview && pages.length > 0 && pages[0].canvas) {
           const previewDataUrl = pages[0].canvas.toDataURL('image/jpeg', PREVIEW_JPEG_QUALITY)
-          previewForProgress = previewDataUrl
+          if (pageOptions.showProgressPreview) {
+            previewForProgress = previewDataUrl
+          }
           if (sampledPreviews.length < MAX_STORED_PREVIEWS) {
             previewForStorage = previewDataUrl
           }
@@ -615,9 +618,12 @@ export async function convertImageToXtc(
 
   let previewUrl: string | null = null
   const sampledPreviews: string[] = []
-  if (options.showProgressPreview && imagePages[0]?.canvas) {
-    previewUrl = imagePages[0].canvas.toDataURL('image/jpeg', PREVIEW_JPEG_QUALITY)
-    sampledPreviews.push(previewUrl)
+  if (imagePages[0]?.canvas) {
+    const previewDataUrl = imagePages[0].canvas.toDataURL('image/jpeg', PREVIEW_JPEG_QUALITY)
+    sampledPreviews.push(previewDataUrl)
+    if (options.showProgressPreview) {
+      previewUrl = previewDataUrl
+    }
   }
   onProgress(1, previewUrl)
 
@@ -731,13 +737,12 @@ export async function convertVideoToXtc(
       encodedPages.push(...pages.map(encodeCanvasPage))
       mappingCtx.addOriginalPage(i + 1, pages.length)
 
-      const includePreview = options.showProgressPreview &&
-        sampledPreviews.length < MAX_STORED_PREVIEWS &&
+      const includePreview = sampledPreviews.length < MAX_STORED_PREVIEWS &&
         shouldGenerateSampledPreview(i + 1, frameCount)
       if (includePreview && pages.length > 0 && pages[0].canvas) {
         const previewDataUrl = pages[0].canvas.toDataURL('image/jpeg', PREVIEW_JPEG_QUALITY)
         sampledPreviews.push(previewDataUrl)
-        onProgress((i + 1) / frameCount, previewDataUrl)
+        onProgress((i + 1) / frameCount, options.showProgressPreview ? previewDataUrl : null)
       } else {
         onProgress((i + 1) / frameCount, null)
       }
@@ -799,13 +804,12 @@ async function convertPdfToXtc(
     encodedPages.push(...pages.map(encodeCanvasPage))
     mappingCtx.addOriginalPage(i, pages.length)
 
-    const includePreview = options.showProgressPreview &&
-      sampledPreviews.length < MAX_STORED_PREVIEWS &&
+    const includePreview = sampledPreviews.length < MAX_STORED_PREVIEWS &&
       shouldGenerateSampledPreview(i, numPages)
     if (includePreview && pages.length > 0 && pages[0].canvas) {
       const previewBlob = await canvasToBlob(pages[0].canvas, 'image/jpeg', PREVIEW_JPEG_QUALITY)
       const previewDataUrl = await blobToDataUrl(previewBlob)
-      onProgress(i / numPages, previewDataUrl)
+      onProgress(i / numPages, options.showProgressPreview ? previewDataUrl : null)
 
       if (sampledPreviews.length < MAX_STORED_PREVIEWS) {
         sampledPreviews.push(previewDataUrl)
