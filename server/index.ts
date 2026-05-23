@@ -1,10 +1,12 @@
 import { Hono } from 'hono'
 import { api } from './api'
+import { opdsRoutes } from './opds/routes'
 
 const app = new Hono()
 
 // Mount API routes under /api
 app.route('/api', api)
+app.route('/opds', opdsRoutes)
 
 // Serve static files and SPA fallback using Bun.file()
 app.get('*', async (c) => {

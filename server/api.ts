@@ -1,11 +1,14 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { opdsApiRoutes } from './opds/routes'
 
 const api = new Hono()
 
 api.use('*', cors({
   origin: ['https://xtcjs.app', 'http://localhost:5173'],
 }))
+
+api.route('/opds', opdsApiRoutes)
 
 // Config
 const FLUSH_INTERVAL_MS = 60 * 60 * 1000 // 1 hour default

@@ -77,6 +77,47 @@ Your content is automatically processed for the best e-ink reading experience:
 
 ---
 
+## Self-hosted OPDS Docker Service
+
+XTC.js can also run as a Docker service for a mounted CBZ library. The OPDS catalog is available at:
+
+```text
+http://<server-ip>:3000/opds
+```
+
+The default `docker-compose.yml` mounts `./library` read-only at `/library`, converts CBZ files to XTC on demand, and stores converted files in the persistent `xtcjs-data` volume under `/usr/src/app/data/opds-cache`.
+
+```bash
+mkdir -p library
+docker compose up --build
+```
+
+Useful endpoints:
+
+| Endpoint | Purpose |
+|----------|---------|
+| `/opds` | OPDS 1.2 root catalog |
+| `/opds/books` | Paginated CBZ acquisition feed |
+| `/api/opds/status` | Library and conversion status |
+| `/api/opds/rescan` | Manual library rescan |
+
+Docker conversion defaults can be changed with environment variables:
+
+| Variable | Default |
+|----------|---------|
+| `LIBRARY_DIR` | `/library` |
+| `OPDS_CACHE_DIR` | `/usr/src/app/data/opds-cache` |
+| `OPDS_PAGE_SIZE` | `50` |
+| `XTC_DEVICE` | `X4` |
+| `XTC_SPLIT_MODE` | `overlap` |
+| `XTC_DITHERING` | `floyd` |
+| `XTC_CONTRAST` | `4` |
+| `XTC_2BIT` | `false` |
+
+Compatibility note: CrossPoint currently appears to support OPDS browsing, but its OPDS downloader is EPUB-oriented in the public source. XTC.js exposes `.xtc/.xtch` downloads through OPDS, but CrossPoint may need an upstream change to accept XTC acquisition links and preserve the downloaded file extension.
+
+---
+
 ## Recommended Settings
 
 ### 📖 Manga & Comics

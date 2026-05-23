@@ -10,7 +10,8 @@
     "build:static": "VITE_API_URL=https://api.xtcjs.app/api vite build",
     "preview": "vite preview",
     "serve": "bun run server/index.ts",
-    "serve:api": "bun run server/api-only.ts"
+    "serve:api": "bun run server/api-only.ts",
+    "test": "bun test"
   },
   "dependencies": {
     "@hono/vite-dev-server": "^0.24.1",
@@ -22,7 +23,8 @@
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^5.4.624",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@tanstack/router-plugin": "^1.158.1",

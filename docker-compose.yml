@@ -3,8 +3,18 @@ services:
     build: .
     ports:
       - "3000:3000"
+    environment:
+      LIBRARY_DIR: /library
+      OPDS_CACHE_DIR: /usr/src/app/data/opds-cache
+      OPDS_PAGE_SIZE: "50"
+      XTC_DEVICE: X4
+      XTC_SPLIT_MODE: overlap
+      XTC_DITHERING: floyd
+      XTC_CONTRAST: "4"
+      XTC_2BIT: "false"
     volumes:
       - xtcjs-data:/usr/src/app/data
+      - ./library:/library:ro
     restart: unless-stopped
 
 volumes:
