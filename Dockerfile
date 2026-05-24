@@ -34,4 +34,4 @@ RUN mkdir -p data && chown bun:bun data
 # run the app
 USER bun
 EXPOSE 3000/tcp
-ENTRYPOINT [ "bun", "run", "serve" ]
+ENTRYPOINT [ "bun", "run", "server/index.ts" ]

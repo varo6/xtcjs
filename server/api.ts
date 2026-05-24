@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { opdsApiRoutes } from './opds/routes'
+import { ensureParentDirectory } from './storage'
 
 const api = new Hono()
 
@@ -51,6 +52,7 @@ async function initDatabase() {
     const { Database } = await import('bun:sqlite')
     const DB_PATH = import.meta.dir + '/../data/stats.db'
 
+    await ensureParentDirectory(DB_PATH)
     db = new Database(DB_PATH, { create: true })
     db.run('PRAGMA journal_mode = WAL')
 
