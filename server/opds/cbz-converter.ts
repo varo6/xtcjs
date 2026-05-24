@@ -1,7 +1,7 @@
 import JSZip from 'jszip'
 import sharp from 'sharp'
-import { buildXtcFromXtgPages } from '../../src/lib/xtc-format'
-import { applyContrastRgba, applyDitheringRgba, rgbaToXtg, rgbaToXth, toGrayscaleRgba } from '../../src/lib/processing/pixels'
+import { buildXtcFromXtgPages } from './xtc-format'
+import { applyContrastRgba, applyDitheringRgba, rgbaToXtg, rgbaToXth, toGrayscaleRgba } from './pixels'
 import type { ServerConversionOptions } from './types'
 
 interface Segment {
