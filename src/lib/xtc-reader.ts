@@ -172,7 +172,7 @@ async function getXtcPageCount(buffer: ArrayBuffer): Promise<number> {
 /**
  * Decode XTG or XTH page data to canvas.
  */
-function decodeXtcPageToCanvas(pageBuffer: ArrayBuffer): HTMLCanvasElement {
+export function decodeXtcPageToCanvas(pageBuffer: ArrayBuffer): HTMLCanvasElement {
   const view = new DataView(pageBuffer)
   const uint8 = new Uint8Array(pageBuffer)
 

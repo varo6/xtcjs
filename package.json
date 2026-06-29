@@ -8,6 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:static": "VITE_API_URL=https://api.xtcjs.app/api vite build",
+    "test": "bun test",
     "preview": "vite preview",
     "serve": "bun run server/index.ts",
     "serve:api": "bun run server/api-only.ts"

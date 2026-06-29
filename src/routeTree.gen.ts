@@ -11,10 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VideoRouteImport } from './routes/video'
 import { Route as PdfRouteImport } from './routes/pdf'
+import { Route as PagesRouteImport } from './routes/pages'
 import { Route as MetadataRouteImport } from './routes/metadata'
 import { Route as MergeRouteImport } from './routes/merge'
 import { Route as ImageRouteImport } from './routes/image'
-import { Route as Feature4RouteImport } from './routes/feature4'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -26,6 +26,11 @@ const VideoRoute = VideoRouteImport.update({
 const PdfRoute = PdfRouteImport.update({
   id: '/pdf',
   path: '/pdf',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PagesRoute = PagesRouteImport.update({
+  id: '/pages',
+  path: '/pages',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MetadataRoute = MetadataRouteImport.update({
@@ -43,11 +48,6 @@ const ImageRoute = ImageRouteImport.update({
   path: '/image',
   getParentRoute: () => rootRouteImport,
 } as any)
-const Feature4Route = Feature4RouteImport.update({
-  id: '/feature4',
-  path: '/feature4',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
@@ -62,20 +62,20 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/feature4': typeof Feature4Route
   '/image': typeof ImageRoute
   '/merge': typeof MergeRoute
   '/metadata': typeof MetadataRoute
+  '/pages': typeof PagesRoute
   '/pdf': typeof PdfRoute
   '/video': typeof VideoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/feature4': typeof Feature4Route
   '/image': typeof ImageRoute
   '/merge': typeof MergeRoute
   '/metadata': typeof MetadataRoute
+  '/pages': typeof PagesRoute
   '/pdf': typeof PdfRoute
   '/video': typeof VideoRoute
 }
@@ -83,10 +83,10 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/feature4': typeof Feature4Route
   '/image': typeof ImageRoute
   '/merge': typeof MergeRoute
   '/metadata': typeof MetadataRoute
+  '/pages': typeof PagesRoute
   '/pdf': typeof PdfRoute
   '/video': typeof VideoRoute
 }
@@ -95,30 +95,30 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
-    | '/feature4'
     | '/image'
     | '/merge'
     | '/metadata'
+    | '/pages'
     | '/pdf'
     | '/video'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/about'
-    | '/feature4'
     | '/image'
     | '/merge'
     | '/metadata'
+    | '/pages'
     | '/pdf'
     | '/video'
   id:
     | '__root__'
     | '/'
     | '/about'
-    | '/feature4'
     | '/image'
     | '/merge'
     | '/metadata'
+    | '/pages'
     | '/pdf'
     | '/video'
   fileRoutesById: FileRoutesById
@@ -126,10 +126,10 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
-  Feature4Route: typeof Feature4Route
   ImageRoute: typeof ImageRoute
   MergeRoute: typeof MergeRoute
   MetadataRoute: typeof MetadataRoute
+  PagesRoute: typeof PagesRoute
   PdfRoute: typeof PdfRoute
   VideoRoute: typeof VideoRoute
 }
@@ -148,6 +148,13 @@ declare module '@tanstack/react-router' {
       path: '/pdf'
       fullPath: '/pdf'
       preLoaderRoute: typeof PdfRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pages': {
+      id: '/pages'
+      path: '/pages'
+      fullPath: '/pages'
+      preLoaderRoute: typeof PagesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/metadata': {
@@ -171,13 +178,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ImageRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/feature4': {
-      id: '/feature4'
-      path: '/feature4'
-      fullPath: '/feature4'
-      preLoaderRoute: typeof Feature4RouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/about': {
       id: '/about'
       path: '/about'
@@ -198,10 +198,10 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
-  Feature4Route: Feature4Route,
   ImageRoute: ImageRoute,
   MergeRoute: MergeRoute,
   MetadataRoute: MetadataRoute,
+  PagesRoute: PagesRoute,
   PdfRoute: PdfRoute,
   VideoRoute: VideoRoute,
 }
