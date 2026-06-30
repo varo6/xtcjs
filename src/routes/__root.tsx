@@ -122,7 +122,7 @@ function RootLayout() {
                 Video
               </Link>
               <Link to="/pages" className={`nav-subtab${location.pathname === '/pages' ? ' active' : ''}`}>
-                Replace Pages
+                Edit Pages
               </Link>
               <Link to="/metadata" className={`nav-subtab${location.pathname === '/metadata' ? ' active' : ''}`}>
                 Metadata

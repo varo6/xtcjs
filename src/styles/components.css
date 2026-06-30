@@ -1217,21 +1217,8 @@
   padding-top: 0;
 }
 
-.page-replace-intro {
-  margin-bottom: var(--space-xl);
-}
-
-.page-replace-intro h2 {
-  max-width: 18ch;
-  margin-top: var(--space-xs);
-  margin-bottom: var(--space-sm);
-  font-size: clamp(1.75rem, 5vw, 2.5rem);
-  line-height: 1.05;
-}
-
-.page-replace-intro p {
-  max-width: 68ch;
-  font-size: 0.92rem;
+.page-edit-notice {
+  margin: 0 0 var(--space-lg);
 }
 
 .page-replace-eyebrow {
@@ -1331,6 +1318,50 @@
   color: var(--ink-light);
 }
 
+.page-edit-mode {
+  display: flex;
+  width: min(100%, 320px);
+  margin-top: var(--space-lg);
+  padding: 0;
+  border: 0;
+}
+
+.page-edit-mode legend {
+  margin-bottom: var(--space-xs);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faded);
+}
+
+.page-edit-mode button {
+  flex: 1;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--paper);
+  border: var(--border);
+  color: var(--ink-faded);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.page-edit-mode button + button {
+  border-left: 0;
+}
+
+.page-edit-mode button.active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.page-edit-mode button:focus-visible {
+  position: relative;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .page-replace-form {
   display: grid;
   gap: var(--space-md);
@@ -1385,6 +1416,32 @@
   font-family: var(--font-mono);
   font-size: 0.72rem;
   overflow-wrap: anywhere;
+}
+
+.page-replace-card .page-edit-help {
+  max-width: none;
+  margin-top: var(--space-sm);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--ink-faded);
+}
+
+.page-edit-progress {
+  display: block;
+  margin-top: var(--space-md);
+  padding: var(--space-sm);
+  background: var(--paper);
+  border: var(--border-light);
+}
+
+.page-edit-progress > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--ink-light);
 }
 
 .page-replace-queue-button {
@@ -1442,6 +1499,13 @@
   font-weight: 600;
 }
 
+.page-replace-item > header p {
+  margin-top: var(--space-xs);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--ink-faded);
+}
+
 .page-replace-item .btn-clear-results {
   flex: 0 0 auto;
   margin-left: 0;
@@ -1452,6 +1516,10 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-sm);
   margin-top: var(--space-md);
+}
+
+.page-replace-previews.single {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .page-replace-previews figure {

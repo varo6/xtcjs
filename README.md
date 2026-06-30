@@ -49,11 +49,11 @@ Your content is automatically processed for the best e-ink reading experience:
 -  **Split** — Break large files by page ranges or equal chunks
 -  **Chain Workflows** — Split, then convert parts to XTC in one flow
 
-### 🩹 Page Replacement
+### 🩹 Page Editing
 
-- Replace individual XTG/XTH pages inside existing XTC/XTCH books
-- Queue several fixes and download one edited book
-- Preserve metadata and every untouched page byte-for-byte
+- Add or replace pages inside existing XTC/XTCH books
+- Import XTG/XTH, XTC/XTCH, CBZ/CBR, PDF, or image files
+- Queue several edits, preserve book metadata, and download one edited book
 
 ### 📝 Metadata Editor
 
