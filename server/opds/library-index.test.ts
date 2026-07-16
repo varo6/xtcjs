@@ -41,7 +41,7 @@ describe('LibraryIndex', () => {
     expect(books[0].title).toBe('Book')
   })
 
-  test('uses ComicInfo title and author when present', async () => {
+  test('does not unpack CBZ metadata while indexing', async () => {
     const dir = await makeTempDir()
     await writeCbz(join(dir, 'comic.cbz'), `
       <ComicInfo>
@@ -53,8 +53,8 @@ describe('LibraryIndex', () => {
     const index = new LibraryIndex(dir)
     const [book] = await index.rescan()
 
-    expect(book.title).toBe('Library Title')
-    expect(book.author).toBe('Library Author')
+    expect(book.title).toBe('comic')
+    expect(book.author).toBeUndefined()
   })
 
   test('book id changes when source metadata changes', async () => {
