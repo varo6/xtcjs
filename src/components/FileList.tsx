@@ -24,6 +24,7 @@ export function FileList({ files, onRemove, onConvert, isConverting }: FileListP
             <span className="name">{file.name}</span>
             <span className="size">{formatSize(file.size)}</span>
             <button
+              type="button"
               className="remove"
               onClick={() => onRemove(idx)}
               aria-label="Remove file"
@@ -34,6 +35,7 @@ export function FileList({ files, onRemove, onConvert, isConverting }: FileListP
         ))}
       </div>
       <button
+        type="button"
         className={`btn-convert${isConverting ? ' loading' : ''}`}
         onClick={onConvert}
         disabled={isConverting}

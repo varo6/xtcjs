@@ -19,6 +19,11 @@ interface ConverterPageProps {
   notice?: string
 }
 
+interface FileSelectionState {
+  selectedFiles: File[]
+  transferNotice: string | null
+}
+
 const MAX_FALLBACK_PREVIEW_PAGES = 200
 const PROGRESS_UPDATE_INTERVAL_MS = 120
 
@@ -62,8 +67,10 @@ function getUniqueZipEntryName(fileName: string, usedNames: Set<string>): string
 }
 
 export function ConverterPage({ fileType, notice }: ConverterPageProps) {
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
-  const [transferNotice, setTransferNotice] = useState<string | null>(null)
+  const [{ selectedFiles, transferNotice }, setFileSelection] = useState<FileSelectionState>({
+    selectedFiles: [],
+    transferNotice: null,
+  })
 
   // Use IndexedDB-backed storage for results
   const {
@@ -81,6 +88,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
 
   // Check for transferred files on mount
   useEffect(() => {
+    let noticeTimer: ReturnType<typeof setTimeout> | null = null
     const pending = consumePendingFiles()
     if (pending.length > 0) {
       // Filter files matching this converter's type
@@ -99,12 +107,21 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
         return name.endsWith('.cbz') || name.endsWith('.cbr')
       })
       if (matchingFiles.length > 0) {
-        setSelectedFiles(matchingFiles)
-        setTransferNotice(
-          `${matchingFiles.length} file${matchingFiles.length > 1 ? 's' : ''} received from merge/split`
-        )
+        const message = `${matchingFiles.length} file${matchingFiles.length > 1 ? 's' : ''} received from merge/split`
+        setFileSelection({
+          selectedFiles: matchingFiles,
+          transferNotice: message,
+        })
         // Clear notice after 5 seconds
-        setTimeout(() => setTransferNotice(null), 5000)
+        noticeTimer = setTimeout(() => {
+          setFileSelection((prev) => ({ ...prev, transferNotice: null }))
+        }, 5000)
+      }
+    }
+
+    return () => {
+      if (noticeTimer !== null) {
+        clearTimeout(noticeTimer)
       }
     }
   }, [fileType])
@@ -121,7 +138,10 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
   const pendingPreviewRef = useRef<string | undefined>(undefined)
   const progressTimerRef = useRef<number | null>(null)
   const lastProgressFlushRef = useRef(0)
-  const previewCacheRef = useRef<Map<string, string[]>>(new Map())
+  const previewCacheRef = useRef<Map<string, string[]> | null>(null)
+  if (previewCacheRef.current === null) {
+    previewCacheRef.current = new Map()
+  }
   const [options, setOptions] = useState<ConversionOptions>({
     device: 'X4',
     splitMode: (fileType === 'image' || fileType === 'video') ? 'nosplit' : 'overlap',
@@ -139,12 +159,33 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     videoFps: 1.0,
   })
 
+  const clearProgressTimer = useCallback(() => {
+    if (progressTimerRef.current !== null) {
+      clearTimeout(progressTimerRef.current)
+      progressTimerRef.current = null
+    }
+  }, [])
+
+  const revokeProgressPreview = useCallback(() => {
+    const previewUrl = progressPreviewRef.current
+    if (previewUrl && previewUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(previewUrl)
+    }
+    progressPreviewRef.current = null
+  }, [])
+
   const handleFiles = useCallback((files: File[]) => {
-    setSelectedFiles(prev => [...prev, ...files])
+    setFileSelection(prev => ({
+      ...prev,
+      selectedFiles: [...prev.selectedFiles, ...files],
+    }))
   }, [])
 
   const handleRemove = useCallback((index: number) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index))
+    setFileSelection(prev => ({
+      ...prev,
+      selectedFiles: prev.selectedFiles.filter((_, i) => i !== index),
+    }))
   }, [])
 
   const flushProgressUi = useCallback((force = false) => {
@@ -162,22 +203,17 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
       const nextPreview = pendingPreviewRef.current
       pendingPreviewRef.current = undefined
 
-      if (progressPreviewRef.current && progressPreviewRef.current.startsWith('blob:')) {
-        URL.revokeObjectURL(progressPreviewRef.current)
-      }
+      revokeProgressPreview()
       progressPreviewRef.current = nextPreview ?? null
       setPreviewUrl(nextPreview ?? null)
     }
 
     lastProgressFlushRef.current = now
-  }, [])
+  }, [revokeProgressPreview])
 
   const scheduleProgressUiFlush = useCallback((force = false) => {
     if (force) {
-      if (progressTimerRef.current !== null) {
-        clearTimeout(progressTimerRef.current)
-        progressTimerRef.current = null
-      }
+      clearProgressTimer()
       flushProgressUi(true)
       return
     }
@@ -192,7 +228,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
       progressTimerRef.current = null
       flushProgressUi(true)
     }, delay)
-  }, [flushProgressUi])
+  }, [clearProgressTimer, flushProgressUi])
 
   const handleConvert = useCallback(async () => {
     if (selectedFiles.length === 0) return
@@ -202,14 +238,8 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     setPreviewError(null)
     setProgress(0)
     setProgressText('Processing...')
-    if (progressPreviewRef.current && progressPreviewRef.current.startsWith('blob:')) {
-      URL.revokeObjectURL(progressPreviewRef.current)
-      progressPreviewRef.current = null
-    }
-    if (progressTimerRef.current !== null) {
-      clearTimeout(progressTimerRef.current)
-      progressTimerRef.current = null
-    }
+    revokeProgressPreview()
+    clearProgressTimer()
     pendingProgressRef.current = null
     pendingPreviewRef.current = undefined
     lastProgressFlushRef.current = performance.now()
@@ -244,7 +274,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
         recordConversion(fileType === 'image' || fileType === 'video' ? 'cbz' : fileType).catch(() => {})
       } catch (err) {
         console.error(`Error converting ${file.name}:`, err)
-        const fallbackExtension = fileType === 'image' && options.is2bit ? '.xtch' : '.xtc'
+        const fallbackExtension = options.is2bit ? '.xtch' : '.xtc'
         // Store error result
         await addResult({
           name: file.name.replace(/\.[^/.]+$/i, fallbackExtension),
@@ -256,27 +286,31 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
       scheduleProgressUiFlush(true)
     }
 
-    if (progressTimerRef.current !== null) {
-      clearTimeout(progressTimerRef.current)
-      progressTimerRef.current = null
-    }
+    clearProgressTimer()
     pendingProgressRef.current = null
     pendingPreviewRef.current = undefined
     setProgress(1)
     setProgressText('Complete')
-    if (progressPreviewRef.current && progressPreviewRef.current.startsWith('blob:')) {
-      URL.revokeObjectURL(progressPreviewRef.current)
-      progressPreviewRef.current = null
-    }
+    revokeProgressPreview()
     setPreviewUrl(null)
     setIsConverting(false)
-  }, [selectedFiles, fileType, options, addResult, clearSession, scheduleProgressUiFlush])
+  }, [
+    selectedFiles,
+    fileType,
+    options,
+    addResult,
+    clearSession,
+    clearProgressTimer,
+    revokeProgressPreview,
+    scheduleProgressUiFlush,
+  ])
 
   const handlePreview = useCallback(async (result: StoredResult) => {
     try {
       setPreviewError(null)
 
-      const cached = previewCacheRef.current.get(result.id)
+      const previewCache = previewCacheRef.current
+      const cached = previewCache.get(result.id)
       if (cached && cached.length > 0) {
         setViewerPages(cached)
         return
@@ -284,7 +318,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
 
       const images = await getPreviewImages(result)
       if (images.length > 0) {
-        previewCacheRef.current.set(result.id, images)
+        previewCache.set(result.id, images)
         setViewerPages(images)
         return
       }
@@ -300,7 +334,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
         : undefined
       const canvases = await extractXtcPages(data, decodeLimit)
       const decodedImages = canvases.map((canvas) => canvas.toDataURL('image/png'))
-      previewCacheRef.current.set(result.id, decodedImages)
+      previewCache.set(result.id, decodedImages)
       setViewerPages(decodedImages)
     } catch (err) {
       console.error('Preview failed:', err)
@@ -339,8 +373,14 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
       const usedNames = new Set<string>()
       let addedCount = 0
 
-      for (const result of successfulResults) {
-        const data = await getResultData(result)
+      const resultData = await Promise.all(
+        successfulResults.map(async (result) => ({
+          result,
+          data: await getResultData(result),
+        }))
+      )
+
+      for (const { result, data } of resultData) {
         if (!data || data.byteLength === 0) {
           console.warn(`Skipping ${result.name}: no data found`)
           continue
@@ -383,14 +423,10 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
 
   useEffect(() => {
     return () => {
-      if (progressTimerRef.current !== null) {
-        clearTimeout(progressTimerRef.current)
-      }
-      if (progressPreviewRef.current && progressPreviewRef.current.startsWith('blob:')) {
-        URL.revokeObjectURL(progressPreviewRef.current)
-      }
+      clearProgressTimer()
+      revokeProgressPreview()
     }
-  }, [])
+  }, [clearProgressTimer, revokeProgressPreview])
 
   // Combine current and recovered results for display
   const allResults = [...recoveredResults, ...results]
@@ -422,10 +458,10 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
             Recovered {recoveredCount} file{recoveredCount > 1 ? 's' : ''} from previous session
           </p>
           <div className="recovered-actions">
-            <button onClick={dismissRecovered} className="btn-dismiss">
+            <button type="button" onClick={dismissRecovered} className="btn-dismiss">
               Dismiss
             </button>
-            <button onClick={clearAll} className="btn-clear-all">
+            <button type="button" onClick={clearAll} className="btn-clear-all">
               Clear All
             </button>
           </div>

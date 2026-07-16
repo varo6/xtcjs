@@ -10,11 +10,11 @@ export function setPendingFiles(files: File[]) {
   listeners.forEach(fn => fn(files))
 }
 
-export function getPendingFiles(): File[] {
+function getPendingFiles(): File[] {
   return pendingFiles
 }
 
-export function clearPendingFiles() {
+function clearPendingFiles() {
   pendingFiles = []
   listeners.forEach(fn => fn([]))
 }
@@ -25,7 +25,7 @@ export function consumePendingFiles(): File[] {
   return files
 }
 
-export function subscribeToPendingFiles(fn: TransferListener): () => void {
+function subscribeToPendingFiles(fn: TransferListener): () => void {
   listeners.push(fn)
   return () => {
     listeners = listeners.filter(l => l !== fn)

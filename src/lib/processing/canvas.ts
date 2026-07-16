@@ -1,6 +1,6 @@
 // Canvas utility functions for rotation and resizing
 
-export const DEVICE_DIMENSIONS = {
+const DEVICE_DIMENSIONS = {
   X4: { width: 480, height: 800 },
   X3: { width: 528, height: 792 }
 } as const;
@@ -89,6 +89,8 @@ export function resizeWithPadding(
   result.width = targetWidth;
   result.height = targetHeight;
   const ctx = result.getContext('2d')!;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
 
   // Fill with padding color (white by default)
   ctx.fillStyle = `rgb(${padColor}, ${padColor}, ${padColor})`;

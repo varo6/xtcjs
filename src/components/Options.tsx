@@ -25,7 +25,7 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
         </div>
 
         <div className="device-control">
-          <div className="device-toggle" role="group" aria-label="Target device">
+          <fieldset className="device-toggle" aria-label="Target device">
             <button
               type="button"
               className={options.device === 'X4' ? 'active' : ''}
@@ -44,7 +44,7 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
             >
               [X3]
             </button>
-          </div>
+          </fieldset>
           {options.device === 'X3' && (
             <p className="device-warning">WARNING: Select only if you are using the X3 device.</p>
           )}
@@ -112,19 +112,17 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
           </div>
         )}
 
-        {isImageMode && (
-          <div className="option option-checkbox">
-            <label htmlFor="is2bit" className="checkbox-label">
-              <input
-                type="checkbox"
-                id="is2bit"
-                checked={options.is2bit}
-                onChange={(e) => onChange({ ...options, is2bit: e.target.checked })}
-              />
-              <span>Use XTCH 2-bit grayscale output</span>
-            </label>
-          </div>
-        )}
+        <div className="option option-checkbox">
+          <label htmlFor="is2bit" className="checkbox-label">
+            <input
+              type="checkbox"
+              id="is2bit"
+              checked={options.is2bit}
+              onChange={(e) => onChange({ ...options, is2bit: e.target.checked })}
+            />
+            <span>2-bit grayscale (XTCH) - 4 gray levels, better shading, ~2x file size</span>
+          </label>
+        </div>
 
         {isVideoMode && (
           <div className="option">

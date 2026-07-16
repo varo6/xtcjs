@@ -6,6 +6,7 @@ import { parseXtcFile } from './xtc-reader'
 import { buildCbz, splitPdf, type OutputFormat, detectFileType } from './merge'
 import { loadPdfDocument } from './pdfjs'
 import { TARGET_WIDTH, TARGET_HEIGHT } from './processing/canvas'
+import { mapWithConcurrency } from './concurrency'
 
 export interface PageRange {
   start: number
@@ -36,7 +37,7 @@ export function parsePageRanges(input: string, totalPages: number): PageRange[] 
   const parts = input.split(',').map(s => s.trim()).filter(s => s.length > 0)
 
   for (const part of parts) {
-    if (part.includes('-')) {
+    if (/-/.test(part)) {
       const [startStr, endStr] = part.split('-').map(s => s.trim())
       const start = parseInt(startStr, 10)
       const end = parseInt(endStr, 10)
@@ -193,24 +194,25 @@ async function splitCbzFile(
       pageProgress: 0,
     })
 
-    // Only extract images for this range
-    const rangeImages: { name: string; blob: Blob }[] = []
-    for (let i = range.start - 1; i < range.end; i++) {
-      const imgFile = imageFiles[i]
+    const rangeEntries = imageFiles.slice(range.start - 1, range.end)
+    let completedImages = 0
+    const rangeImages = await mapWithConcurrency(rangeEntries, async (imgFile, index) => {
       const blob = await imgFile.entry.async('blob')
       const ext = imgFile.path.substring(imgFile.path.lastIndexOf('.'))
-      rangeImages.push({
-        name: `${String(rangeImages.length + 1).padStart(5, '0')}${ext}`,
-        blob,
-      })
 
+      completedImages++
       onProgress({
         phase: 'building',
         rangeIndex: rangeIdx,
         totalRanges: ranges.length,
-        pageProgress: (rangeImages.length) / pageCount,
+        pageProgress: completedImages / pageCount,
       })
-    }
+
+      return {
+        name: `${String(index + 1).padStart(5, '0')}${ext}`,
+        blob,
+      }
+    })
 
     if (outputFormat === 'cbz') {
       const data = await buildCbz(rangeImages)

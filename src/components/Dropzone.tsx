@@ -94,9 +94,9 @@ export function Dropzone({ onFiles, fileType = 'cbz', multiple = true }: Dropzon
 
   return (
     <section className="dropzone-wrapper">
-      <div
+      <button
+        type="button"
         className={`dropzone${isDragover ? ' dragover' : ''}`}
-        tabIndex={0}
         onClick={handleClick}
         onKeyDown={handleKeyDown}
         onDragOver={handleDragOver}
@@ -116,15 +116,16 @@ export function Dropzone({ onFiles, fileType = 'cbz', multiple = true }: Dropzon
             <span className="dropzone-secondary">or click to browse</span>
           </div>
         </div>
-        <input
-          type="file"
-          ref={fileInputRef}
-          accept={accept}
-          multiple={multiple}
-          hidden
-          onChange={handleFileChange}
-        />
-      </div>
+      </button>
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept={accept}
+        multiple={multiple}
+        aria-label={`Choose ${label} files`}
+        hidden
+        onChange={handleFileChange}
+      />
     </section>
   )
 }

@@ -1,6 +1,6 @@
 import { applyDithering } from '../processing/dithering'
 import { applyContrast, calculateFourWaySegments, calculateOverlapSegments, findContentBounds, toGrayscale } from '../processing/image'
-import { imageDataToXtg } from '../processing/xtg'
+import { imageDataToXtg, imageDataToXth } from '../processing/xtg'
 import type { ConversionOptions } from '../conversion/types'
 
 interface CropRect {
@@ -137,6 +137,8 @@ function resizeWithPadding(
 ): OffscreenCanvas {
   const result = new OffscreenCanvas(targetWidth, targetHeight)
   const ctx = result.getContext('2d', { alpha: false })!
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
   ctx.fillStyle = `rgb(${padColor}, ${padColor}, ${padColor})`
   ctx.fillRect(0, 0, targetWidth, targetHeight)
 
@@ -154,10 +156,12 @@ async function buildWorkerPage(
   canvas: OffscreenCanvas,
   includePreview: boolean,
   targetWidth: number,
-  targetHeight: number
+  targetHeight: number,
+  is2bit = false
 ): Promise<WorkerPageResult> {
   const ctx = canvas.getContext('2d', { alpha: false })!
-  const xtg = imageDataToXtg(ctx.getImageData(0, 0, targetWidth, targetHeight))
+  const imageData = ctx.getImageData(0, 0, targetWidth, targetHeight)
+  const xtg = is2bit ? imageDataToXth(imageData) : imageDataToXtg(imageData)
 
   if (!includePreview) {
     return { name, xtg }
@@ -197,7 +201,8 @@ async function buildOverviewWorkerPage(
     asCanvas2d(overviewCanvas.getContext('2d', { alpha: false })!),
     targetWidth,
     targetHeight,
-    options.dithering
+    options.dithering,
+    options.is2bit
   )
 
   return buildWorkerPage(
@@ -205,7 +210,8 @@ async function buildOverviewWorkerPage(
     overviewCanvas,
     includePreview,
     targetWidth,
-    targetHeight
+    targetHeight,
+    options.is2bit
   )
 }
 
@@ -244,14 +250,16 @@ async function processBitmap(
       asCanvas2d(finalCanvas.getContext('2d', { alpha: false })!),
       targetWidth,
       targetHeight,
-      options.dithering
+      options.dithering,
+      options.is2bit
     )
     results.push(await buildWorkerPage(
       getPageName(pageNum, '0_page'),
       finalCanvas,
       includePreview,
       targetWidth,
-      targetHeight
+      targetHeight,
+      options.is2bit
     ))
     return results
   }
@@ -285,7 +293,8 @@ async function processBitmap(
           asCanvas2d(finalCanvas.getContext('2d', { alpha: false })!),
           targetWidth,
           targetHeight,
-          options.dithering
+          options.dithering,
+          options.is2bit
         )
 
         results.push(await buildWorkerPage(
@@ -293,7 +302,8 @@ async function processBitmap(
           finalCanvas,
           includePreview && !previewAssigned,
           targetWidth,
-          targetHeight
+          targetHeight,
+          options.is2bit
         ))
         previewAssigned = true
       }
@@ -310,7 +320,8 @@ async function processBitmap(
           asCanvas2d(finalCanvas.getContext('2d', { alpha: false })!),
           targetWidth,
           targetHeight,
-          options.dithering
+          options.dithering,
+          options.is2bit
         )
 
         results.push(await buildWorkerPage(
@@ -318,7 +329,8 @@ async function processBitmap(
           finalCanvas,
           includePreview && !previewAssigned,
           targetWidth,
-          targetHeight
+          targetHeight,
+          options.is2bit
         ))
         previewAssigned = true
       }
@@ -331,14 +343,16 @@ async function processBitmap(
         asCanvas2d(topFinal.getContext('2d', { alpha: false })!),
         targetWidth,
         targetHeight,
-        options.dithering
+        options.dithering,
+        options.is2bit
       )
       results.push(await buildWorkerPage(
         getPageName(pageNum, '2_a'),
         topFinal,
         includePreview && !previewAssigned,
         targetWidth,
-        targetHeight
+        targetHeight,
+        options.is2bit
       ))
       previewAssigned = true
 
@@ -348,14 +362,16 @@ async function processBitmap(
         asCanvas2d(bottomFinal.getContext('2d', { alpha: false })!),
         targetWidth,
         targetHeight,
-        options.dithering
+        options.dithering,
+        options.is2bit
       )
       results.push(await buildWorkerPage(
         getPageName(pageNum, '2_b'),
         bottomFinal,
         includePreview && !previewAssigned,
         targetWidth,
-        targetHeight
+        targetHeight,
+        options.is2bit
       ))
     }
   } else {
@@ -365,14 +381,16 @@ async function processBitmap(
       asCanvas2d(finalCanvas.getContext('2d', { alpha: false })!),
       targetWidth,
       targetHeight,
-      options.dithering
+      options.dithering,
+      options.is2bit
     )
     results.push(await buildWorkerPage(
       getPageName(pageNum, '0_spread'),
       finalCanvas,
       includePreview,
       targetWidth,
-      targetHeight
+      targetHeight,
+      options.is2bit
     ))
   }
 

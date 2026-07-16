@@ -49,13 +49,22 @@ export async function extractPdfMetadata(pdf: PDFDocumentProxy): Promise<BookMet
  */
 async function flattenOutline(
   pdf: PDFDocumentProxy,
-  items: PdfOutlineItem[],
-  result: TocEntry[] = []
+  items: PdfOutlineItem[]
 ): Promise<TocEntry[]> {
-  for (const item of items) {
+  const result = await flattenOutlineItems(pdf, items)
+  applyTocEndPages(pdf, result)
+  return result
+}
+
+async function flattenOutlineItems(
+  pdf: PDFDocumentProxy,
+  items: PdfOutlineItem[]
+): Promise<TocEntry[]> {
+  const entriesByItem = await Promise.all(items.map(async (item) => {
+    const entries: TocEntry[] = []
     const pageNum = await resolveDestinationPage(pdf, item.dest)
     if (pageNum !== null) {
-      result.push({
+      entries.push({
         title: item.title,
         startPage: pageNum,
         endPage: pageNum  // Will be calculated later
@@ -64,10 +73,15 @@ async function flattenOutline(
 
     // Recursively process nested items
     if (item.items && item.items.length > 0) {
-      await flattenOutline(pdf, item.items, result)
+      entries.push(...await flattenOutlineItems(pdf, item.items))
     }
-  }
+    return entries
+  }))
 
+  return entriesByItem.flat()
+}
+
+function applyTocEndPages(pdf: PDFDocumentProxy, result: TocEntry[]): void {
   // Calculate end pages based on next chapter start
   for (let i = 0; i < result.length; i++) {
     if (i < result.length - 1) {
@@ -76,8 +90,6 @@ async function flattenOutline(
       result[i].endPage = pdf.numPages
     }
   }
-
-  return result
 }
 
 /**

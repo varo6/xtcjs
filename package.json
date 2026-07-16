@@ -15,25 +15,25 @@
   },
   "dependencies": {
     "@hono/vite-dev-server": "^0.24.1",
-    "@tanstack/react-router": "^1.158.1",
-    "axios": "^1.13.4",
-    "hono": "^4.11.7",
+    "@tanstack/react-router": "^1.170.16",
+    "axios": "^1.18.0",
+    "hono": "^4.12.26",
     "jszip": "^3.10.1",
     "node-unrar-js": "^2.0.2",
     "pdf-lib": "^1.17.1",
-    "pdfjs-dist": "^5.4.624",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
+    "pdfjs-dist": "^5.7.284",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "sharp": "^0.34.5"
   },
   "devDependencies": {
-    "@tanstack/router-plugin": "^1.158.1",
+    "@tanstack/router-plugin": "^1.168.18",
     "@types/bun": "latest",
-    "@types/react": "^19.2.13",
+    "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.3",
+    "@vitejs/plugin-react": "^5.2.0",
     "typescript": "^5.9.3",
-    "vite": "^7.3.1",
-    "vite-plugin-pwa": "^1.2.0"
+    "vite": "^7.3.5",
+    "vite-plugin-pwa": "^1.3.0"
   }
 }

@@ -4,7 +4,7 @@ import { Dropzone } from '../components/Dropzone'
 import { Viewer } from '../components/Viewer'
 import { parseXtcFile, type ParsedXtc, extractXtcPages } from '../lib/xtc-reader'
 import { buildXtcFromBuffers } from '../lib/xtc-format'
-import type { BookMetadata, TocEntry } from '../lib/metadata/types'
+import type { BookMetadata, TocEntry } from '../lib/metadata'
 
 export const Route = createFileRoute('/metadata')({
   component: MetadataEditor,
@@ -172,9 +172,10 @@ function MetadataEditor() {
             <p><strong>Type:</strong> {parsed.header.is2bit ? 'XTCH (2-bit)' : 'XTC (1-bit)'}</p>
 
             <div className="metadata-actions">
-              <button className="btn-preview" onClick={handlePreview}>Preview</button>
-              <button className="btn-download" onClick={handleSave}>Save & Download</button>
+              <button type="button" className="btn-preview" onClick={handlePreview}>Preview</button>
+              <button type="button" className="btn-download" onClick={handleSave}>Save & Download</button>
               <button
+                type="button"
                 className="btn-clear-results"
                 onClick={() => {
                   setFile(null)
@@ -217,7 +218,7 @@ function MetadataEditor() {
           <section className="metadata-card">
             <div className="metadata-chapter-header">
               <h3>Chapters (TOC)</h3>
-              <button className="btn-preview" onClick={handleAddChapter}>+ Add Chapter</button>
+              <button type="button" className="btn-preview" onClick={handleAddChapter}>+ Add Chapter</button>
             </div>
 
             {metadata.toc.length === 0 ? (
@@ -260,6 +261,7 @@ function MetadataEditor() {
 
                     <div className="chapter-controls">
                       <button
+                        type="button"
                         className="btn-preview"
                         onClick={() => handleMoveChapter(idx, 'up')}
                         disabled={idx === 0}
@@ -268,6 +270,7 @@ function MetadataEditor() {
                         ↑
                       </button>
                       <button
+                        type="button"
                         className="btn-preview"
                         onClick={() => handleMoveChapter(idx, 'down')}
                         disabled={idx === metadata.toc.length - 1}
@@ -276,6 +279,7 @@ function MetadataEditor() {
                         ↓
                       </button>
                       <button
+                        type="button"
                         className="btn-preview btn-delete-meta"
                         onClick={() => handleRemoveChapter(idx)}
                       >

@@ -36,6 +36,21 @@ const memoryStats = {
   torrent: 0,
 }
 
+const rssFields = {
+  title: /<title[^>]*><!\[CDATA\[(.+?)\]\]><\/title>|<title[^>]*>(.+?)<\/title>/,
+  guid: /<guid[^>]*><!\[CDATA\[(.+?)\]\]><\/guid>|<guid[^>]*>(.+?)<\/guid>/,
+  link: /<link[^>]*><!\[CDATA\[(.+?)\]\]><\/link>|<link[^>]*>(.+?)<\/link>/,
+  pubDate: /<pubDate[^>]*><!\[CDATA\[(.+?)\]\]><\/pubDate>|<pubDate[^>]*>(.+?)<\/pubDate>/,
+} as const
+
+const nyaaFields = {
+  infoHash: /<nyaa:infoHash>(.+?)<\/nyaa:infoHash>/,
+  size: /<nyaa:size>(.+?)<\/nyaa:size>/,
+  seeders: /<nyaa:seeders>(.+?)<\/nyaa:seeders>/,
+  leechers: /<nyaa:leechers>(.+?)<\/nyaa:leechers>/,
+  downloads: /<nyaa:downloads>(.+?)<\/nyaa:downloads>/,
+} as const
+
 // Get today's date as YYYY-MM-DD
 function today(): string {
   return new Date().toISOString().slice(0, 10)
@@ -227,12 +242,12 @@ api.get('/nyaa', async (c) => {
     let match
     while ((match = itemRegex.exec(xml)) !== null) {
       const content = match[1]
-      const get = (tag: string) => {
-        const m = content.match(new RegExp(`<${tag}[^>]*><!\\[CDATA\\[(.+?)\\]\\]></${tag}>|<${tag}[^>]*>(.+?)</${tag}>`))
+      const get = (tag: keyof typeof rssFields) => {
+        const m = content.match(rssFields[tag])
         return m ? (m[1] || m[2] || '') : ''
       }
-      const getNs = (tag: string) => {
-        const m = content.match(new RegExp(`<nyaa:${tag}>(.+?)</nyaa:${tag}>`))
+      const getNs = (tag: keyof typeof nyaaFields) => {
+        const m = content.match(nyaaFields[tag])
         return m ? m[1] : ''
       }
 

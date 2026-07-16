@@ -136,7 +136,7 @@ function parseZeroIndexedPage(rawPage: string | null): number | undefined {
 /**
  * Try to find and parse ComicInfo.xml from a list of file entries
  */
-export function findComicInfoXml(
+function findComicInfoXml(
   files: Array<{ path: string; content: string }>
 ): BookMetadata | null {
   for (const file of files) {

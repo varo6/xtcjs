@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useEffectEvent } from 'react'
 import axios from 'axios'
 import { API_BASE } from '../lib/api'
 import '../styles/manga-search.css'
@@ -20,12 +20,22 @@ function trackTorrentClick() {
 }
 
 export function MangaSearch({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const wasOpenRef = useRef(open)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<NyaaResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+
+  if (wasOpenRef.current !== open) {
+    wasOpenRef.current = open
+    if (!open) {
+      setQuery('')
+      setResults([])
+      setError('')
+    }
+  }
 
   const search = useCallback(async (q: string) => {
     if (!q.trim()) {
@@ -47,14 +57,17 @@ export function MangaSearch({ open, onClose }: { open: boolean; onClose: () => v
       setLoading(false)
     }
   }, [])
+  const searchEvent = useEffectEvent((q: string) => {
+    search(q)
+  })
+  const closeEvent = useEffectEvent(() => {
+    onClose()
+  })
 
   useEffect(() => {
     if (open) {
-      setTimeout(() => inputRef.current?.focus(), 100)
-    } else {
-      setQuery('')
-      setResults([])
-      setError('')
+      const focusTimer = setTimeout(() => inputRef.current?.focus(), 100)
+      return () => clearTimeout(focusTimer)
     }
   }, [open])
 
@@ -62,12 +75,12 @@ export function MangaSearch({ open, onClose }: { open: boolean; onClose: () => v
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     if (query.trim()) {
-      debounceRef.current = setTimeout(() => search(query), 800)
+      debounceRef.current = setTimeout(() => searchEvent(query), 800)
     } else {
       setResults([])
     }
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [query, search])
+  }, [query])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -78,24 +91,24 @@ export function MangaSearch({ open, onClose }: { open: boolean; onClose: () => v
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') closeEvent()
     }
     if (open) window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [open, onClose])
+  }, [open])
 
   if (!open) return null
 
   return (
-    <div className="manga-search-overlay" onClick={onClose}>
-      <div className="manga-search-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="manga-search-overlay" onClick={onClose} role="presentation">
+      <div className="manga-search-modal" onClick={(e) => e.stopPropagation()} role="presentation">
         <div className="manga-search-header">
           <div className="manga-search-header-top">
             <h2>Search Manga</h2>
             <a href="https://thewiki.moe/getting-started/torrenting/" target="_blank" rel="noopener" className="manga-search-hint-underline">
               What is this torrent thing?
             </a>
-            <button className="manga-search-close" onClick={onClose} aria-label="Close">
+            <button type="button" className="manga-search-close" onClick={onClose} aria-label="Close">
               &times;
             </button>
           </div>
@@ -111,6 +124,7 @@ export function MangaSearch({ open, onClose }: { open: boolean; onClose: () => v
             type="text"
             className="manga-search-input"
             placeholder="Search nyaa.si (English Translated)..."
+            aria-label="Search nyaa.si"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -138,24 +152,26 @@ export function MangaSearch({ open, onClose }: { open: boolean; onClose: () => v
           {!loading && !error && query && results.length === 0 && (
             <p className="manga-search-empty">No results found</p>
           )}
-          {results.map((r, i) => (
-            <a key={i} className="manga-search-item" href={r.link} target="_blank" rel="noopener">
-              <div className="manga-search-item-title">{r.title}</div>
+          {results.map((r) => (
+            <div key={r.link || r.torrent || r.magnet || r.title} className="manga-search-item">
+              <a className="manga-search-item-title" href={r.link} target="_blank" rel="noopener">
+                {r.title}
+              </a>
               <div className="manga-search-item-meta">
                 <span>{r.size}</span>
                 <span className="manga-search-seed">S: {r.seeders}</span>
                 <span className="manga-search-leech">L: {r.leechers}</span>
                 <span>{r.date}</span>
               </div>
-              <div className="manga-search-item-actions" onClick={(e) => e.stopPropagation()}>
-                <a href={r.magnet} className="manga-search-magnet" title="Magnet link" onClick={(e) => { e.stopPropagation(); trackTorrentClick() }}>
+              <div className="manga-search-item-actions">
+                <a href={r.magnet} className="manga-search-magnet" title="Magnet link" onClick={trackTorrentClick}>
                   Magnet
                 </a>
-                <a href={r.torrent} className="manga-search-magnet" title="Torrent file" onClick={(e) => { e.stopPropagation(); trackTorrentClick() }}>
+                <a href={r.torrent} className="manga-search-magnet" title="Torrent file" onClick={trackTorrentClick}>
                   .torrent
                 </a>
               </div>
-            </a>
+            </div>
           ))}
         </div>
       </div>

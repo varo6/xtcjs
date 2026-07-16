@@ -33,6 +33,7 @@ export function Results({
           <div className="results-header-actions">
             {onDownloadAll && downloadAllCount > 0 && (
               <button
+                type="button"
                 className={`btn-download-results-zip${isDownloadAllLoading ? ' loading' : ''}`}
                 onClick={onDownloadAll}
                 disabled={isDownloadAllLoading}
@@ -49,7 +50,7 @@ export function Results({
               </button>
             )}
             {onClear && (
-              <button className="btn-clear-results" onClick={onClear}>
+              <button type="button" className="btn-clear-results" onClick={onClear}>
                 Clear Results
               </button>
             )}
@@ -75,12 +76,14 @@ export function Results({
             {!result.error && (
               <div className="result-actions">
                 <button
+                  type="button"
                   className="btn-preview"
                   onClick={() => onPreview(result)}
                 >
                   Preview
                 </button>
                 <button
+                  type="button"
                   className="btn-download"
                   onClick={() => onDownload(result)}
                 >

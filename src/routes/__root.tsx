@@ -38,6 +38,7 @@ function RootLayout() {
             <span className="logo-js">js</span>
           </div>
           <button
+            type="button"
             className="theme-toggle"
             onClick={() => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))}
             aria-label="Toggle theme"
@@ -62,6 +63,7 @@ function RootLayout() {
             )}
           </button>
           <button
+            type="button"
             className="manga-search-trigger"
             onClick={() => setSearchOpen(true)}
             aria-label="Search manga"

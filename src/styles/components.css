@@ -5,10 +5,15 @@
 
 .dropzone {
   position: relative;
+  display: block;
+  width: 100%;
   border: 2px dashed var(--ink-faded);
   background: var(--paper-dark);
   padding: var(--space-2xl) var(--space-lg);
   cursor: pointer;
+  color: inherit;
+  font: inherit;
+  text-align: center;
   transition: all 0.2s ease;
   outline: none;
 }
@@ -109,6 +114,9 @@
 }
 
 .device-toggle {
+  margin: 0;
+  padding: 0;
+  border: 0;
   display: flex;
   gap: var(--space-xs);
   width: 100%;

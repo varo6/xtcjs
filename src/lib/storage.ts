@@ -130,7 +130,7 @@ export async function storeConversion(
 /**
  * Get a full conversion record by ID
  */
-export async function getConversion(id: string): Promise<StoredConversion | null> {
+async function getConversion(id: string): Promise<StoredConversion | null> {
   const db = await openDatabase()
 
   return new Promise((resolve, reject) => {
@@ -162,7 +162,7 @@ export async function getConversionPreviews(id: string): Promise<string[] | null
 /**
  * Delete a conversion record
  */
-export async function deleteConversion(id: string): Promise<void> {
+async function deleteConversion(id: string): Promise<void> {
   const db = await openDatabase()
 
   return new Promise((resolve, reject) => {
@@ -178,7 +178,7 @@ export async function deleteConversion(id: string): Promise<void> {
 /**
  * Delete multiple conversions
  */
-export async function deleteConversions(ids: string[]): Promise<void> {
+async function deleteConversions(ids: string[]): Promise<void> {
   const db = await openDatabase()
 
   return new Promise((resolve, reject) => {
@@ -211,7 +211,7 @@ export async function deleteConversions(ids: string[]): Promise<void> {
 /**
  * Get all unexpired conversion refs (without large data)
  */
-export async function getAllConversionRefs(): Promise<StoredConversionRef[]> {
+async function getAllConversionRefs(): Promise<StoredConversionRef[]> {
   const db = await openDatabase()
   const now = Date.now()
 

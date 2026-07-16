@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, useEffectEvent } from 'react'
 
 interface ViewerProps {
   pages: string[]
@@ -30,6 +30,7 @@ function getThumbnailIndices(currentIndex: number, totalPages: number): number[]
 }
 
 export function Viewer({ pages, onClose }: ViewerProps) {
+  const previousPagesRef = useRef(pages)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isRotated, setIsRotated] = useState(false)
   const thumbnailIndices = useMemo(
@@ -47,33 +48,38 @@ export function Viewer({ pages, onClose }: ViewerProps) {
     setIsRotated(prev => !prev)
   }, [])
 
+  if (pages !== previousPagesRef.current) {
+    previousPagesRef.current = pages
+    setCurrentIndex(0)
+    setIsRotated(false)
+  }
+
+  const handleViewerKeyDown = useEffectEvent((e: KeyboardEvent) => {
+    switch (e.key) {
+      case 'ArrowLeft':
+        goToPage(currentIndex - 1)
+        break
+      case 'ArrowRight':
+        goToPage(currentIndex + 1)
+        break
+      case 'Escape':
+        onClose()
+        break
+      case 'r':
+      case 'R':
+        toggleRotate()
+        break
+    }
+  })
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      switch (e.key) {
-        case 'ArrowLeft':
-          goToPage(currentIndex - 1)
-          break
-        case 'ArrowRight':
-          goToPage(currentIndex + 1)
-          break
-        case 'Escape':
-          onClose()
-          break
-        case 'r':
-        case 'R':
-          toggleRotate()
-          break
-      }
+      handleViewerKeyDown(e)
     }
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [currentIndex, goToPage, onClose, toggleRotate])
-
-  useEffect(() => {
-    setCurrentIndex(0)
-    setIsRotated(false)
-  }, [pages])
+  }, [])
 
   if (pages.length === 0) {
     return null
@@ -88,6 +94,7 @@ export function Viewer({ pages, onClose }: ViewerProps) {
         </div>
         <div className="viewer-controls">
           <button
+            type="button"
             className="viewer-btn"
             onClick={toggleRotate}
             aria-label="Rotate view"
@@ -99,6 +106,7 @@ export function Viewer({ pages, onClose }: ViewerProps) {
           </button>
           <div className="viewer-separator" />
           <button
+            type="button"
             className="viewer-btn"
             onClick={() => goToPage(currentIndex - 1)}
             disabled={currentIndex === 0}
@@ -109,6 +117,7 @@ export function Viewer({ pages, onClose }: ViewerProps) {
             </svg>
           </button>
           <button
+            type="button"
             className="viewer-btn"
             onClick={() => goToPage(currentIndex + 1)}
             disabled={currentIndex === pages.length - 1}
@@ -119,6 +128,7 @@ export function Viewer({ pages, onClose }: ViewerProps) {
             </svg>
           </button>
           <button
+            type="button"
             className="viewer-btn viewer-btn-close"
             onClick={onClose}
             aria-label="Close viewer"
@@ -143,7 +153,8 @@ export function Viewer({ pages, onClose }: ViewerProps) {
         <div className="thumbnail-track">
           {thumbnailIndices.map((i) => (
             <button
-              key={i}
+              key={pages[i] || i}
+              type="button"
               className={`thumbnail${i === currentIndex ? ' active' : ''}`}
               onClick={() => goToPage(i)}
             >

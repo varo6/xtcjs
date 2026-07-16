@@ -15,7 +15,7 @@ export interface Stats {
   daily: DailyStats[]
 }
 
-export async function getStats(days = 30): Promise<Stats> {
+async function getStats(days = 30): Promise<Stats> {
   const response = await fetch(`${API_BASE}/stats?days=${days}`)
   return response.json()
 }
@@ -28,7 +28,7 @@ export async function recordConversion(type: 'cbz' | 'pdf'): Promise<void> {
   })
 }
 
-export async function healthCheck(): Promise<{
+async function healthCheck(): Promise<{
   status: string
   uptime: number
   pending: { cbz: number; pdf: number }

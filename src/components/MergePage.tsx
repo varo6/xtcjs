@@ -277,12 +277,14 @@ export function MergePage() {
       {/* Mode Toggle */}
       <section className="mode-toggle">
         <button
+          type="button"
           className={mode === 'merge' ? 'active' : ''}
           onClick={() => handleModeChange('merge')}
         >
           Merge
         </button>
         <button
+          type="button"
           className={mode === 'split' ? 'active' : ''}
           onClick={() => handleModeChange('split')}
         >
@@ -292,12 +294,12 @@ export function MergePage() {
 
       {/* Dropzone */}
       <section className="dropzone-wrapper">
-        <div
+        <button
+          type="button"
           className="dropzone"
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
           onClick={() => document.getElementById('merge-file-input')?.click()}
-          tabIndex={0}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()
@@ -322,15 +324,16 @@ export function MergePage() {
               </span>
             </div>
           </div>
-          <input
-            id="merge-file-input"
-            type="file"
-            accept=".cbz,.CBZ,.pdf,.PDF,.xtc,.XTC"
-            multiple={mode === 'merge'}
-            hidden
-            onChange={handleFileInput}
-          />
-        </div>
+        </button>
+        <input
+          id="merge-file-input"
+          type="file"
+          accept=".cbz,.CBZ,.pdf,.PDF,.xtc,.XTC"
+          multiple={mode === 'merge'}
+          aria-label={mode === 'merge' ? 'Choose files to merge' : 'Choose a file to split'}
+          hidden
+          onChange={handleFileInput}
+        />
       </section>
 
       {/* Type Error */}
@@ -356,6 +359,7 @@ export function MergePage() {
                 <span className="name">{file.name}</span>
                 <span className="size">{formatSize(file.size)}</span>
                 <button
+                  type="button"
                   className="remove"
                   onClick={() => handleRemove(idx)}
                   aria-label="Remove file"
@@ -400,7 +404,7 @@ export function MergePage() {
           {/* Show output info for CBZ */}
           {detectedType === 'cbz' && (
             <div className="option">
-              <label>Output Format</label>
+              <span className="option-label">Output Format</span>
               <div className="output-info">
                 <span className="output-format-badge">CBZ</span>
                 <span className="output-hint">
@@ -413,7 +417,7 @@ export function MergePage() {
           {/* Show output info for PDF */}
           {detectedType === 'pdf' && (
             <div className="option">
-              <label>Output Format</label>
+              <span className="option-label">Output Format</span>
               <div className="output-info">
                 <span className="output-format-badge">PDF</span>
                 <span className="output-hint">
@@ -487,6 +491,7 @@ export function MergePage() {
       {files.length > 0 && (
         <section className="action-section">
           <button
+            type="button"
             className={`btn-convert${isProcessing ? ' loading' : ''}`}
             onClick={handleProcess}
             disabled={isProcessing || !canProcess}
@@ -530,7 +535,7 @@ export function MergePage() {
             <h2>Complete</h2>
             <span className="badge">{results.filter(r => !r.error).length}</span>
             {results.length > 1 && (
-              <button className="btn-select-all" onClick={handleSelectAll}>
+              <button type="button" className="btn-select-all" onClick={handleSelectAll}>
                 {results.every(r => r.selected) ? 'Deselect All' : 'Select All'}
               </button>
             )}
@@ -542,7 +547,7 @@ export function MergePage() {
                 className={`result-item${result.error ? ' error' : ''}${result.selected ? ' selected' : ''}`}
               >
                 {!result.error && results.length > 1 && (
-                  <label className="result-checkbox">
+                  <label className="result-checkbox" aria-label={`Select ${result.name}`}>
                     <input
                       type="checkbox"
                       checked={result.selected || false}
@@ -565,6 +570,7 @@ export function MergePage() {
                   <div className="result-actions">
                     {result.pageImages && (
                       <button
+                        type="button"
                         className="btn-preview"
                         onClick={() => handlePreview(result)}
                       >
@@ -572,6 +578,7 @@ export function MergePage() {
                       </button>
                     )}
                     <button
+                      type="button"
                       className="btn-download"
                       onClick={() => handleDownload(result)}
                     >
@@ -587,6 +594,7 @@ export function MergePage() {
           <div className="results-actions">
             {results.length > 1 && !results.some(r => r.error) && (
               <button
+                type="button"
                 className="btn-download-all"
                 onClick={() => results.forEach(handleDownload)}
               >
@@ -596,6 +604,7 @@ export function MergePage() {
 
             {canMoveToConverter && (
               <button
+                type="button"
                 className="btn-move-converter"
                 onClick={handleMoveToConverter}
               >
@@ -625,7 +634,7 @@ export function MergePage() {
           </div>
           <div className="results-grid">
             {results.map((result, idx) => (
-              <div key={idx} className="result-item error">
+              <div key={result.error || result.name} className="result-item error">
                 <div className="result-info">
                   <div className="info"><LinkedText text={result.error} /></div>
                 </div>
