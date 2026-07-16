@@ -92,6 +92,12 @@ mkdir -p library
 docker compose up --build
 ```
 
+To mount an existing Linux library without changing its permissions, run the container as the library owner:
+
+```bash
+PUID=$(id -u) PGID=$(id -g) LIBRARY_PATH=/path/to/manga docker compose up --build
+```
+
 Useful endpoints:
 
 | Endpoint | Purpose |
@@ -114,7 +120,9 @@ Docker conversion defaults can be changed with environment variables:
 | `XTC_CONTRAST` | `4` |
 | `XTC_2BIT` | `false` |
 
-Compatibility note: CrossPoint currently appears to support OPDS browsing, but its OPDS downloader is EPUB-oriented in the public source. XTC.js exposes `.xtc/.xtch` downloads through OPDS, but CrossPoint may need an upstream change to accept XTC acquisition links and preserve the downloaded file extension.
+`LIBRARY_PATH`, `PUID`, and `PGID` are Docker Compose variables rather than container environment variables. XTC.js indexes filenames and file metadata without unpacking every CBZ, so large libraries do not load their archives during scans.
+
+XTC/XTCH downloads require a CrossPoint build containing [crosspoint-reader#2627](https://github.com/crosspoint-reader/crosspoint-reader/pull/2627). Older releases can browse the catalog but do not recognize these acquisition formats.
 
 ---
 

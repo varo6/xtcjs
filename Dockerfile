@@ -27,8 +27,8 @@ COPY --from=prerelease /usr/src/app/dist dist
 COPY --from=prerelease /usr/src/app/server server
 COPY --from=prerelease /usr/src/app/package.json .
 
-# create data directory for SQLite persistence
-RUN mkdir -p data && chown bun:bun data
+# Allow the compose-configured host user to write persistent stats and conversions.
+RUN mkdir -p data && chmod 1777 data
 
 # run the app
 USER bun

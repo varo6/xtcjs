@@ -3,6 +3,7 @@ services:
     build: .
     ports:
       - "3000:3000"
+    user: "${PUID:-1000}:${PGID:-1000}"
     environment:
       LIBRARY_DIR: /library
       OPDS_CACHE_DIR: /usr/src/app/data/opds-cache
@@ -14,7 +15,7 @@ services:
       XTC_2BIT: "false"
     volumes:
       - xtcjs-data:/usr/src/app/data
-      - ./library:/library:ro
+      - ${LIBRARY_PATH:-./library}:/library:ro
     restart: unless-stopped
 
 volumes:
