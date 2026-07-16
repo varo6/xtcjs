@@ -42,14 +42,30 @@ describe('OPDS XML generation', () => {
       total: 2,
       query: '',
       updated: '2026-05-23T00:00:00.000Z',
+      format: 'xtc',
     })
 
     expect(xml).toContain('<title>A&amp;B &lt;Vol 1&gt;</title>')
     expect(xml).toContain('<name>One &amp; Two</name>')
     expect(xml).toContain('rel="http://opds-spec.org/acquisition/open-access"')
     expect(xml).toContain('href="http://localhost:3000/opds/books/book-1/download"')
-    expect(xml).toContain('type="application/octet-stream"')
+    expect(xml).toContain('type="application/x-xtc+zip"')
     expect(xml).toContain('href="http://localhost:3000/opds/books?q={searchTerms}"')
+  })
+
+  test('books feed advertises XTCH acquisitions for 2-bit output', () => {
+    const xml = createBooksFeedXml({
+      baseUrl: 'http://localhost:3000',
+      books,
+      page: 1,
+      pageSize: 50,
+      total: 2,
+      query: '',
+      updated: '2026-05-23T00:00:00.000Z',
+      format: 'xtch',
+    })
+
+    expect(xml).toContain('type="application/x-xtch+zip"')
   })
 
   test('books feed emits previous and next pagination links', () => {
@@ -61,6 +77,7 @@ describe('OPDS XML generation', () => {
       total: 5,
       query: 'a&b',
       updated: '2026-05-23T00:00:00.000Z',
+      format: 'xtc',
     })
 
     expect(xml).toContain('rel="previous"')

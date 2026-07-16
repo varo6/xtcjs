@@ -13,10 +13,17 @@ interface BooksFeedOptions {
   total: number
   query: string
   updated: string
+  format: OpdsOutputFormat
 }
+
+export type OpdsOutputFormat = 'xtc' | 'xtch'
 
 export const NAVIGATION_FEED_TYPE = 'application/atom+xml;profile=opds-catalog;kind=navigation'
 export const ACQUISITION_FEED_TYPE = 'application/atom+xml;profile=opds-catalog;kind=acquisition'
+
+export function getAcquisitionMediaType(format: OpdsOutputFormat): string {
+  return format === 'xtch' ? 'application/x-xtch+zip' : 'application/x-xtc+zip'
+}
 
 export function createRootFeedXml({ baseUrl, updated }: RootFeedOptions): string {
   const booksUrl = `${baseUrl}/opds/books`
@@ -30,7 +37,7 @@ export function createRootFeedXml({ baseUrl, updated }: RootFeedOptions): string
 }
 
 export function createBooksFeedXml(options: BooksFeedOptions): string {
-  const { baseUrl, books, page, pageSize, total, query, updated } = options
+  const { baseUrl, books, page, pageSize, total, query, updated, format } = options
   const parts: string[] = [
     '<title>XTCJS Books</title>',
     '<id>urn:xtcjs:opds:books</id>',
@@ -47,13 +54,13 @@ export function createBooksFeedXml(options: BooksFeedOptions): string {
   }
 
   for (const book of books) {
-    parts.push(createBookEntry(baseUrl, book))
+    parts.push(createBookEntry(baseUrl, book, format))
   }
 
   return atomFeed(parts)
 }
 
-function createBookEntry(baseUrl: string, book: LibraryBook): string {
+function createBookEntry(baseUrl: string, book: LibraryBook, format: OpdsOutputFormat): string {
   const author = book.author
     ? `<author><name>${escapeXml(book.author)}</name></author>`
     : ''
@@ -63,7 +70,7 @@ function createBookEntry(baseUrl: string, book: LibraryBook): string {
     `<id>urn:xtcjs:book:${escapeXml(book.id)}</id>`,
     `<updated>${escapeXml(book.updated)}</updated>`,
     author,
-    `<link rel="http://opds-spec.org/acquisition/open-access" href="${escapeAttr(`${baseUrl}/opds/books/${encodeURIComponent(book.id)}/download`)}" type="application/octet-stream"/>`,
+    `<link rel="http://opds-spec.org/acquisition/open-access" href="${escapeAttr(`${baseUrl}/opds/books/${encodeURIComponent(book.id)}/download`)}" type="${getAcquisitionMediaType(format)}"/>`,
     '</entry>',
   ].join('')
 }

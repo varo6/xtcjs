@@ -1,5 +1,12 @@
 import { Hono } from 'hono'
-import { ACQUISITION_FEED_TYPE, NAVIGATION_FEED_TYPE, createBooksFeedXml, createRootFeedXml } from './xml'
+import {
+  ACQUISITION_FEED_TYPE,
+  NAVIGATION_FEED_TYPE,
+  createBooksFeedXml,
+  createRootFeedXml,
+  getAcquisitionMediaType,
+  type OpdsOutputFormat,
+} from './xml'
 import { opdsService } from './service'
 
 export const opdsRoutes = new Hono()
@@ -32,6 +39,7 @@ opdsRoutes.get('/books', async (c) => {
     total: books.length,
     query,
     updated: new Date().toISOString(),
+    format: getOutputFormat(),
   })
 
   return new Response(xml, {
@@ -50,7 +58,7 @@ opdsRoutes.get('/books/:id/download', async (c) => {
   const cached = await opdsService.getConvertedBook(book)
   const file = Bun.file(cached.path)
   const headers = new Headers({
-    'Content-Type': 'application/octet-stream',
+    'Content-Type': getAcquisitionMediaType(getOutputFormat()),
     'Content-Disposition': `attachment; filename="${escapeHeaderValue(cached.filename)}"`,
   })
   if (cached.size > 0) {
@@ -78,4 +86,8 @@ function getBaseUrl(url: string): string {
 
 function escapeHeaderValue(value: string): string {
   return value.replace(/["\\]/g, '_')
+}
+
+function getOutputFormat(): OpdsOutputFormat {
+  return opdsService.config.conversion.is2bit ? 'xtch' : 'xtc'
 }
