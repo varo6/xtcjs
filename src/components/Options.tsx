@@ -96,6 +96,20 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
           </div>
         )}
 
+        {supportsCoverPortrait && (
+          <div className="option option-checkbox">
+            <label htmlFor="applySplitToCover" className="checkbox-label">
+              <input
+                type="checkbox"
+                id="applySplitToCover"
+                checked={options.applySplitToCover}
+                onChange={(e) => onChange({ ...options, applySplitToCover: e.target.checked })}
+              />
+              <span>Apply page split to cover</span>
+            </label>
+          </div>
+        )}
+
         {(isImageMode || isVideoMode) && (
           <div className="option">
             <label htmlFor="imageMode">Image Scaling</label>
