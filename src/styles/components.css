@@ -479,7 +479,8 @@
 }
 
 .btn-preview,
-.btn-download {
+.btn-download,
+.btn-remove-result {
   padding: var(--space-sm) var(--space-md);
   background: var(--paper);
   border: var(--border);
@@ -492,7 +493,8 @@
 }
 
 .btn-preview:hover,
-.btn-download:hover {
+.btn-download:hover,
+.btn-remove-result:hover {
   background: var(--ink);
   color: var(--paper);
 }

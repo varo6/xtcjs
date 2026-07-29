@@ -10,6 +10,7 @@ interface ResultsProps {
   downloadAllCount?: number
   isDownloadAllLoading?: boolean
   onClear?: () => void | Promise<void>
+  onRemove: (result: StoredResult) => void | Promise<void>
 }
 
 export function Results({
@@ -20,6 +21,7 @@ export function Results({
   downloadAllCount = 0,
   isDownloadAllLoading = false,
   onClear,
+  onRemove,
 }: ResultsProps) {
   if (results.length === 0) {
     return null
@@ -73,24 +75,34 @@ export function Results({
                 </div>
               )}
             </div>
-            {!result.error && (
-              <div className="result-actions">
-                <button
-                  type="button"
-                  className="btn-preview"
-                  onClick={() => onPreview(result)}
-                >
-                  Preview
-                </button>
-                <button
-                  type="button"
-                  className="btn-download"
-                  onClick={() => onDownload(result)}
-                >
-                  Download
-                </button>
-              </div>
-            )}
+            <div className="result-actions">
+              {!result.error && (
+                <>
+                  <button
+                    type="button"
+                    className="btn-preview"
+                    onClick={() => onPreview(result)}
+                  >
+                    Preview
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-download"
+                    onClick={() => onDownload(result)}
+                  >
+                    Download
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                className="btn-remove-result"
+                onClick={() => onRemove(result)}
+                aria-label={`Remove ${result.name}`}
+              >
+                &times;
+              </button>
+            </div>
           </div>
         ))}
       </div>

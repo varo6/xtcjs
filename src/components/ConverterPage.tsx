@@ -82,6 +82,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     clearSession,
     clearAll,
     dismissRecovered,
+    removeResult,
     downloadResult,
     getPreviewImages,
     getResultData,
@@ -357,6 +358,12 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     }
   }, [downloadResult])
 
+  const handleRemoveResult = useCallback(async (result: StoredResult) => {
+    if (await removeResult(result)) {
+      previewCacheRef.current.delete(result.id)
+    }
+  }, [removeResult])
+
   const handleDownloadAll = useCallback(async () => {
     if (isDownloadAllLoading) {
       return
@@ -494,6 +501,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
         downloadAllCount={downloadableCount}
         isDownloadAllLoading={isDownloadAllLoading}
         onPreview={handlePreview}
+        onRemove={handleRemoveResult}
         onClear={results.length > 0 ? handleClearResults : undefined}
       />
 

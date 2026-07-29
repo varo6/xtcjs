@@ -6,6 +6,7 @@ import {
   storeConversion,
   getConversionData,
   getConversionPreviews,
+  deleteConversion,
   deleteSessionConversions,
   clearAllConversions,
   cleanupExpiredConversions,
@@ -19,6 +20,10 @@ export interface StoredResult extends StoredConversionRef {
   // For compatibility with ConversionResult interface used by Results component
 }
 
+export function withoutStoredResult<T extends { id: string }>(results: T[], id: string): T[] {
+  return results.filter((result) => result.id !== id)
+}
+
 interface UseStoredResultsReturn {
   results: StoredResult[]
   recoveredResults: StoredResult[]
@@ -28,6 +33,7 @@ interface UseStoredResultsReturn {
   clearSession: () => Promise<void>
   clearAll: () => Promise<void>
   dismissRecovered: () => void
+  removeResult: (result: StoredResult) => Promise<boolean>
   downloadResult: (result: StoredResult) => Promise<void>
   getPreviewImages: (result: StoredResult) => Promise<string[]>
   getResultData: (result: StoredResult) => Promise<ArrayBuffer | null>
@@ -145,6 +151,21 @@ export function useStoredResults(): UseStoredResultsReturn {
     setRecoveredResults([])
   }, [])
 
+  const removeResult = useCallback(async (result: StoredResult): Promise<boolean> => {
+    try {
+      if (!result.id.startsWith('mem-')) {
+        await deleteConversion(result.id)
+      }
+    } catch (err) {
+      console.error('Failed to remove result:', err)
+      return false
+    }
+
+    setResults((prev) => withoutStoredResult(prev, result.id))
+    setRecoveredResults((prev) => withoutStoredResult(prev, result.id))
+    return true
+  }, [])
+
   // Download a result by fetching data from IndexedDB
   const downloadResult = useCallback(async (result: StoredResult): Promise<void> => {
     if (result.error) return
@@ -200,6 +221,7 @@ export function useStoredResults(): UseStoredResultsReturn {
     clearSession,
     clearAll,
     dismissRecovered,
+    removeResult,
     downloadResult,
     getPreviewImages,
     getResultData,

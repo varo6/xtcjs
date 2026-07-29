@@ -162,7 +162,7 @@ export async function getConversionPreviews(id: string): Promise<string[] | null
 /**
  * Delete a conversion record
  */
-async function deleteConversion(id: string): Promise<void> {
+export async function deleteConversion(id: string): Promise<void> {
   const db = await openDatabase()
 
   return new Promise((resolve, reject) => {
