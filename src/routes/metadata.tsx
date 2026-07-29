@@ -148,13 +148,17 @@ function MetadataEditor() {
   }
 
   return (
-    <div className="content-section metadata-page" style={{ gridColumn: '1 / -1' }}>
-      <div className="section-header" style={{ marginBottom: 'var(--space-xl)' }}>
-        <h2 className="metadata-title">Metadata Editor (XTC/XTCH)</h2>
+    <div className="content-section metadata-page">
+      <div className="converter-notice">
+        <p>Edit title, author, and chapter information stored in an XTC or XTCH file.</p>
+      </div>
+
+      <div className="section-header">
+        <h2 className="metadata-heading">Metadata Editor (XTC/XTCH)</h2>
       </div>
 
       {!file && (
-        <div className="dropzone-wrapper" style={{ minHeight: '300px' }}>
+        <div className="dropzone-wrapper">
           <Dropzone onFiles={handleFileDrop} fileType="xtc" multiple={false} />
         </div>
       )}
