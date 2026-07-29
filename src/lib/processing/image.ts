@@ -194,3 +194,14 @@ export function calculateFourWaySegments(
     { x: halfWidth, y: halfHeight, w: rightWidth, h: bottomHeight }
   ]
 }
+
+export function shouldSplitPage(
+  width: number,
+  height: number,
+  orientation: 'landscape' | 'portrait',
+  splitMode: 'overlap' | 'split' | 'fourway' | 'nosplit'
+): boolean {
+  return orientation === 'portrait'
+    ? splitMode === 'fourway'
+    : width < height && splitMode !== 'nosplit'
+}

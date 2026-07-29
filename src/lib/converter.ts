@@ -4,7 +4,7 @@ import JSZip from 'jszip'
 import { createExtractorFromData } from 'node-unrar-js'
 import unrarWasm from 'node-unrar-js/esm/js/unrar.wasm?url'
 import { applyDithering } from './processing/dithering'
-import { toGrayscale, applyContrast, calculateOverlapSegments, calculateFourWaySegments, findContentBounds } from './processing/image'
+import { toGrayscale, applyContrast, calculateOverlapSegments, calculateFourWaySegments, findContentBounds, shouldSplitPage } from './processing/image'
 import { rotateCanvas, extractAndRotate, extractRegion, resizeWithPadding, getTargetDimensions } from './processing/canvas'
 import { imageDataToXtg, imageDataToXth } from './processing/xtg'
 import { buildXtcFromXtgPages } from './xtc-format'
@@ -895,7 +895,9 @@ function processCanvasAsImage(
 
   toGrayscale(ctx, width, height)
 
-  if (options.orientation === 'portrait') {
+  const shouldSplit = shouldSplitPage(width, height, options.orientation, options.splitMode)
+
+  if (options.orientation === 'portrait' && !shouldSplit) {
     const finalCanvas = applyImageMode(
       canvas,
       targetWidth,
@@ -913,10 +915,8 @@ function processCanvasAsImage(
   }
 
   const landscapeRotation = options.landscapeFlipClockwise ? -90 : 90
-  const shouldSplit = width < height && options.splitMode !== 'nosplit'
-
   if (shouldSplit) {
-    if (options.pageOverview !== 'none') {
+    if (options.orientation === 'landscape' && options.pageOverview !== 'none') {
       results.push(buildOverviewPage(canvas, pageNum, targetWidth, targetHeight, options, landscapeRotation))
     }
 
@@ -939,7 +939,9 @@ function processCanvasAsImage(
         const letter = String.fromCharCode(97 + idx)
         const segmentCanvas = extractRegion(canvas, seg.x, seg.y, seg.w, seg.h)
         const trimmedSegment = trimCanvasToContent(segmentCanvas)
-        const pageCanvas = rotateCanvas(trimmedSegment, landscapeRotation)
+        const pageCanvas = options.orientation === 'portrait'
+          ? trimmedSegment
+          : rotateCanvas(trimmedSegment, landscapeRotation)
         const finalCanvas = resizeWithPadding(pageCanvas, 255, targetWidth, targetHeight)
         applyDithering(finalCanvas.getContext('2d')!, targetWidth, targetHeight, options.dithering, options.is2bit)
 
@@ -1040,7 +1042,9 @@ function processLoadedImage(
 
   toGrayscale(ctx, width, height)
 
-  if (options.orientation === 'portrait') {
+  const shouldSplit = shouldSplitPage(width, height, options.orientation, options.splitMode)
+
+  if (options.orientation === 'portrait' && !shouldSplit) {
     const finalCanvas = applyImageMode(
       canvas,
       targetWidth,
@@ -1058,10 +1062,8 @@ function processLoadedImage(
   }
 
   const landscapeRotation = options.landscapeFlipClockwise ? -90 : 90
-  const shouldSplit = width < height && options.splitMode !== 'nosplit'
-
   if (shouldSplit) {
-    if (options.pageOverview !== 'none') {
+    if (options.orientation === 'landscape' && options.pageOverview !== 'none') {
       results.push(buildOverviewPage(canvas, pageNum, targetWidth, targetHeight, options, landscapeRotation))
     }
 
@@ -1084,7 +1086,9 @@ function processLoadedImage(
         const letter = String.fromCharCode(97 + idx)
         const segmentCanvas = extractRegion(canvas, seg.x, seg.y, seg.w, seg.h)
         const trimmedSegment = trimCanvasToContent(segmentCanvas)
-        const pageCanvas = rotateCanvas(trimmedSegment, landscapeRotation)
+        const pageCanvas = options.orientation === 'portrait'
+          ? trimmedSegment
+          : rotateCanvas(trimmedSegment, landscapeRotation)
         const finalCanvas = resizeWithPadding(pageCanvas, 255, targetWidth, targetHeight)
         applyDithering(finalCanvas.getContext('2d')!, targetWidth, targetHeight, options.dithering, options.is2bit)
 

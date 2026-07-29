@@ -11,9 +11,10 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const isImageMode = fileType === 'image'
   const isVideoMode = fileType === 'video'
-  const supportsSplit = !isImageMode && !isVideoMode && options.orientation === 'landscape'
+  const supportsSplit = !isImageMode && !isVideoMode &&
+    (options.orientation === 'landscape' || fileType === 'pdf')
   const supportsCoverPortrait = !isImageMode && !isVideoMode && options.orientation === 'landscape'
-  const showPageOverview = supportsSplit &&
+  const showPageOverview = options.orientation === 'landscape' && supportsSplit &&
     options.splitMode !== 'nosplit' &&
     (fileType === 'cbz' || fileType === 'pdf')
 
@@ -61,7 +62,16 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
           <select
             id="orientation"
             value={options.orientation}
-            onChange={(e) => onChange({ ...options, orientation: e.target.value as 'landscape' | 'portrait' })}
+            onChange={(e) => {
+              const orientation = e.target.value as 'landscape' | 'portrait'
+              onChange({
+                ...options,
+                orientation,
+                splitMode: orientation === 'portrait' && options.splitMode !== 'fourway'
+                  ? 'nosplit'
+                  : options.splitMode
+              })
+            }}
           >
             <option value="landscape">Landscape</option>
             <option value="portrait">Portrait</option>
@@ -150,10 +160,10 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
               value={options.splitMode}
               onChange={(e) => onChange({ ...options, splitMode: e.target.value as ConversionOptions['splitMode'] })}
             >
-              <option value="overlap">Overlapping thirds</option>
-              <option value="split">Split in half</option>
+              {options.orientation === 'landscape' && <option value="overlap">Overlapping thirds</option>}
+              {options.orientation === 'landscape' && <option value="split">Split in half</option>}
               {fileType === 'pdf' && (
-                <option value="fourway">Split by columns (4-way)</option>
+                <option value="fourway">Two-column paper (4 pages)</option>
               )}
               <option value="nosplit">No split</option>
             </select>

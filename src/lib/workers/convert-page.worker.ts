@@ -1,5 +1,5 @@
 import { applyDithering } from '../processing/dithering'
-import { applyContrast, calculateFourWaySegments, calculateOverlapSegments, findContentBounds, toGrayscale } from '../processing/image'
+import { applyContrast, calculateFourWaySegments, calculateOverlapSegments, findContentBounds, shouldSplitPage, toGrayscale } from '../processing/image'
 import { imageDataToXtg, imageDataToXth } from '../processing/xtg'
 import type { ConversionOptions } from '../conversion/types'
 
@@ -244,7 +244,9 @@ async function processBitmap(
 
   toGrayscale(asCanvas2d(baseCtx), width, height)
 
-  if (options.orientation === 'portrait') {
+  const shouldSplit = shouldSplitPage(width, height, options.orientation, options.splitMode)
+
+  if (options.orientation === 'portrait' && !shouldSplit) {
     const finalCanvas = resizeWithPadding(baseCanvas, 255, targetWidth, targetHeight)
     applyDithering(
       asCanvas2d(finalCanvas.getContext('2d', { alpha: false })!),
@@ -265,11 +267,10 @@ async function processBitmap(
   }
 
   const landscapeRotation = options.landscapeFlipClockwise ? -90 : 90
-  const shouldSplit = width < height && options.splitMode !== 'nosplit'
   let previewAssigned = false
 
   if (shouldSplit) {
-    if (options.pageOverview !== 'none') {
+    if (options.orientation === 'landscape' && options.pageOverview !== 'none') {
       results.push(await buildOverviewWorkerPage(
         baseCanvas,
         pageNum,
@@ -314,7 +315,9 @@ async function processBitmap(
         const letter = String.fromCharCode(97 + idx)
         const segmentCanvas = extractRegion(baseCanvas, seg.x, seg.y, seg.w, seg.h)
         const trimmedSegment = trimCanvasToContent(segmentCanvas)
-        const pageCanvas = rotateCanvas(trimmedSegment, landscapeRotation)
+        const pageCanvas = options.orientation === 'portrait'
+          ? trimmedSegment
+          : rotateCanvas(trimmedSegment, landscapeRotation)
         const finalCanvas = resizeWithPadding(pageCanvas, 255, targetWidth, targetHeight)
         applyDithering(
           asCanvas2d(finalCanvas.getContext('2d', { alpha: false })!),
