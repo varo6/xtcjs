@@ -2,12 +2,14 @@ import { ConversionCache } from './cache'
 import { convertCbzFileToXtc } from './cbz-converter'
 import { loadOpdsConfig } from './config'
 import { LibraryIndex } from './library-index'
+import { SerialTaskQueue } from './task-queue'
 import type { LibraryBook, OpdsConfig } from './types'
 
 export class OpdsService {
   readonly config: OpdsConfig
   private readonly index: LibraryIndex
   private readonly cache: ConversionCache
+  private readonly conversions = new SerialTaskQueue()
   private scanPromise: Promise<LibraryBook[]> | null = null
 
   constructor(config = loadOpdsConfig()) {
@@ -45,8 +47,6 @@ export class OpdsService {
   async getStatus() {
     await this.ensureScanned()
     return {
-      libraryDir: this.config.libraryDir,
-      cacheDir: this.config.cacheDir,
       pageSize: this.config.pageSize,
       conversion: this.config.conversion,
       bookCount: this.index.getBooks().length,
@@ -55,7 +55,7 @@ export class OpdsService {
 
   async getConvertedBook(book: LibraryBook) {
     return this.cache.getOrCreate(book, this.config.conversion, () =>
-      convertCbzFileToXtc(book.absolutePath, this.config.conversion)
+      this.conversions.run(() => convertCbzFileToXtc(book.absolutePath, this.config.conversion))
     )
   }
 }

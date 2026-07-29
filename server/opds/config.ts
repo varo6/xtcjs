@@ -29,10 +29,17 @@ function parseInteger(value: string | undefined, fallback: number, min: number, 
 }
 
 export function loadOpdsConfig(env: Record<string, string | undefined> = process.env): OpdsConfig {
+  const username = env.OPDS_USERNAME || undefined
+  const password = env.OPDS_PASSWORD || undefined
+  if (Boolean(username) !== Boolean(password)) {
+    throw new Error('OPDS_USERNAME and OPDS_PASSWORD must be set together')
+  }
+
   return {
     libraryDir: resolve(env.LIBRARY_DIR || DEFAULT_LIBRARY_DIR),
     cacheDir: resolve(env.OPDS_CACHE_DIR || DEFAULT_CACHE_DIR),
     pageSize: parseInteger(env.OPDS_PAGE_SIZE, 50, 1, 200),
+    auth: username && password ? { username, password } : undefined,
     conversion: {
       device: parseDevice(env.XTC_DEVICE),
       splitMode: parseSplitMode(env.XTC_SPLIT_MODE),

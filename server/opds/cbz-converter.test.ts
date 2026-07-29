@@ -4,7 +4,7 @@ import sharp from 'sharp'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { convertCbzFileToXtc } from './cbz-converter'
+import { convertCbzFileToXtc, getOverlapSegments } from './cbz-converter'
 import type { ServerConversionOptions } from './types'
 
 const tempDirs: string[] = []
@@ -61,6 +61,12 @@ afterEach(async () => {
 })
 
 describe('convertCbzFileToXtc', () => {
+  test('uses the X3 aspect ratio for overlapping segments', () => {
+    const [first] = getOverlapSegments(120, 180, { width: 528, height: 792 })
+
+    expect(first.height).toBe(80)
+  })
+
   test('converts a tiny CBZ to a valid XTC with X4 page dimensions', async () => {
     const dir = await makeTempDir()
     const cbzPath = join(dir, 'book.cbz')

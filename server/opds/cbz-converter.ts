@@ -49,7 +49,7 @@ async function convertImagePage(input: Buffer, options: ServerConversionOptions)
 
   const target = getTargetDimensions(options.device)
   const shouldSplit = options.orientation === 'landscape' && width < height && options.splitMode !== 'nosplit'
-  const segments = shouldSplit ? getSegments(width, height, options.splitMode) : [{ left: 0, top: 0, width, height }]
+  const segments = shouldSplit ? getSegments(width, height, options.splitMode, target) : [{ left: 0, top: 0, width, height }]
   const rotateDegrees = options.orientation === 'landscape' ? 90 : 0
 
   const pages: ArrayBuffer[] = []
@@ -90,7 +90,12 @@ function getTargetDimensions(device: ServerConversionOptions['device']): { width
     : { width: 480, height: 800 }
 }
 
-function getSegments(width: number, height: number, splitMode: ServerConversionOptions['splitMode']): Segment[] {
+function getSegments(
+  width: number,
+  height: number,
+  splitMode: ServerConversionOptions['splitMode'],
+  target: { width: number; height: number },
+): Segment[] {
   if (splitMode === 'fourway') {
     const halfWidth = Math.floor(width / 2)
     const halfHeight = Math.floor(height / 2)
@@ -110,12 +115,16 @@ function getSegments(width: number, height: number, splitMode: ServerConversionO
     ]
   }
 
-  return getOverlapSegments(width, height)
+  return getOverlapSegments(width, height, target)
 }
 
-function getOverlapSegments(width: number, height: number): Segment[] {
-  const scale = 800 / width
-  const segmentHeight = Math.floor(480 / scale)
+export function getOverlapSegments(
+  width: number,
+  height: number,
+  target: { width: number; height: number },
+): Segment[] {
+  const scale = target.height / width
+  const segmentHeight = Math.floor(target.width / scale)
   let numSegments = 3
   let shift = 0
 

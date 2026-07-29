@@ -8,6 +8,8 @@ services:
       LIBRARY_DIR: /library
       OPDS_CACHE_DIR: /usr/src/app/data/opds-cache
       OPDS_PAGE_SIZE: "50"
+      OPDS_USERNAME: ${OPDS_USERNAME:-}
+      OPDS_PASSWORD: ${OPDS_PASSWORD:-}
       XTC_DEVICE: X4
       XTC_SPLIT_MODE: overlap
       XTC_DITHERING: floyd

@@ -98,6 +98,14 @@ To mount an existing Linux library without changing its permissions, run the con
 PUID=$(id -u) PGID=$(id -g) LIBRARY_PATH=/path/to/manga docker compose up --build
 ```
 
+To require the username and password configured for the OPDS server in CrossPoint:
+
+```bash
+OPDS_USERNAME=reader OPDS_PASSWORD='change-me' docker compose up --build
+```
+
+Set both credential variables or leave both empty. Keep unauthenticated instances on a trusted local network.
+
 Useful endpoints:
 
 | Endpoint | Purpose |
@@ -114,13 +122,15 @@ Docker conversion defaults can be changed with environment variables:
 | `LIBRARY_DIR` | `/library` |
 | `OPDS_CACHE_DIR` | `/usr/src/app/data/opds-cache` |
 | `OPDS_PAGE_SIZE` | `50` |
+| `OPDS_USERNAME` | Empty (authentication disabled) |
+| `OPDS_PASSWORD` | Empty (authentication disabled) |
 | `XTC_DEVICE` | `X4` |
 | `XTC_SPLIT_MODE` | `overlap` |
 | `XTC_DITHERING` | `floyd` |
 | `XTC_CONTRAST` | `4` |
 | `XTC_2BIT` | `false` |
 
-`LIBRARY_PATH`, `PUID`, and `PGID` are Docker Compose variables rather than container environment variables. XTC.js indexes filenames and file metadata without unpacking every CBZ, so large libraries do not load their archives during scans.
+`LIBRARY_PATH`, `PUID`, and `PGID` are Docker Compose variables rather than container environment variables. XTC.js indexes filenames and file metadata without unpacking every CBZ, so large libraries do not load their archives during scans. On-demand conversions run one at a time to keep memory usage bounded when several books are requested together.
 
 XTC/XTCH downloads require a CrossPoint build containing [crosspoint-reader#2627](https://github.com/crosspoint-reader/crosspoint-reader/pull/2627). Older releases can browse the catalog but do not recognize these acquisition formats.
 

@@ -13,7 +13,13 @@ export interface OpdsConfig {
   libraryDir: string
   cacheDir: string
   pageSize: number
+  auth?: OpdsAuth
   conversion: ServerConversionOptions
+}
+
+export interface OpdsAuth {
+  username: string
+  password: string
 }
 
 export interface ServerConversionOptions {

@@ -1,4 +1,4 @@
-import { Hono } from 'hono'
+import { Hono, type MiddlewareHandler } from 'hono'
 import {
   ACQUISITION_FEED_TYPE,
   NAVIGATION_FEED_TYPE,
@@ -8,8 +8,18 @@ import {
   type OpdsOutputFormat,
 } from './xml'
 import { opdsService } from './service'
+import { createOpdsAuth } from './auth'
+import { TaskQueueFullError } from './task-queue'
+
+const privateResponseHeaders: MiddlewareHandler = async (c, next) => {
+  await next()
+  c.header('Cache-Control', 'private, no-store')
+  c.header('X-Content-Type-Options', 'nosniff')
+}
 
 export const opdsRoutes = new Hono()
+opdsRoutes.use('*', privateResponseHeaders)
+opdsRoutes.use('*', createOpdsAuth(opdsService.config.auth))
 
 opdsRoutes.get('/', (c) => {
   const xml = createRootFeedXml({
@@ -55,7 +65,16 @@ opdsRoutes.get('/books/:id/download', async (c) => {
     return c.json({ error: 'Book not found' }, 404)
   }
 
-  const cached = await opdsService.getConvertedBook(book)
+  let cached
+  try {
+    cached = await opdsService.getConvertedBook(book)
+  } catch (error) {
+    if (error instanceof TaskQueueFullError) {
+      c.header('Retry-After', '30')
+      return c.json({ error: error.message }, 503)
+    }
+    throw error
+  }
   const file = Bun.file(cached.path)
   const headers = new Headers({
     'Content-Type': getAcquisitionMediaType(getOutputFormat()),
@@ -69,6 +88,8 @@ opdsRoutes.get('/books/:id/download', async (c) => {
 })
 
 export const opdsApiRoutes = new Hono()
+opdsApiRoutes.use('*', privateResponseHeaders)
+opdsApiRoutes.use('*', createOpdsAuth(opdsService.config.auth))
 
 opdsApiRoutes.get('/status', async (c) => {
   return c.json(await opdsService.getStatus())
