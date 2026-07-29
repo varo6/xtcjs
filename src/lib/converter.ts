@@ -13,6 +13,7 @@ import { parseComicInfo } from './metadata/comicinfo'
 import { PageMappingContext, adjustTocForMapping } from './page-mapping'
 import { ConvertWorkerPool, isWorkerPipelineSupported } from './conversion/worker-pool'
 import { loadPdfDocument } from './pdfjs'
+import { imageBlobToCanvas, isComicImagePath, isJxlPath } from './image-codec'
 import type { BookMetadata } from './metadata'
 import type { ConversionOptions, ConversionResult } from './conversion/types'
 
@@ -22,8 +23,6 @@ const PERF_PIPELINE_V2 = true
 const PREVIEW_EVERY_N_PAGES = 5
 const MAX_STORED_PREVIEWS = 12
 const PREVIEW_JPEG_QUALITY = 0.55
-const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'])
-
 interface ProcessedPage {
   name: string
   canvas: HTMLCanvasElement
@@ -312,7 +311,7 @@ async function finalizeConversionResult(
 
 async function processArchiveSourcePages(
   totalPages: number,
-  getBlob: (index: number) => Promise<Blob>,
+  getImage: (index: number) => Promise<{ blob: Blob; isJxl: boolean }>,
   getPageOptions: (index: number) => ConversionOptions,
   getOriginalPage: (index: number) => number,
   onProgress: (progress: number, previewUrl: string | null) => void
@@ -348,7 +347,7 @@ async function processArchiveSourcePages(
       const pageNum = index + 1
       const includePreview = sampledPreviews.length < MAX_STORED_PREVIEWS &&
         shouldGenerateSampledPreview(pageNum, totalPages)
-      const imgBlob = await getBlob(index)
+      const { blob: imgBlob, isJxl } = await getImage(index)
 
       let previewForProgress: string | null = null
       let previewForStorage: string | null = null
@@ -356,7 +355,7 @@ async function processArchiveSourcePages(
 
       if (pool && !workerDisabled) {
         try {
-          const workerPages = await pool.processPage(pageNum, imgBlob, pageOptions, includePreview)
+          const workerPages = await pool.processPage(pageNum, imgBlob, isJxl, pageOptions, includePreview)
           pageResults = workerPages.map((page) => ({ name: page.name, xtg: page.xtg }))
 
           if (includePreview) {
@@ -387,7 +386,7 @@ async function processArchiveSourcePages(
       }
 
       if (pageResults.length === 0) {
-        const pages = await processImage(imgBlob, pageNum, pageOptions)
+        const pages = await processImage(imgBlob, pageNum, pageOptions, isJxl)
         pageResults = pages.map((page) => encodeCanvasPage(page, pageOptions.is2bit))
 
         if (includePreview && pages.length > 0 && pages[0].canvas) {
@@ -469,8 +468,7 @@ async function convertCbzToXtc(
     if (zipEntry.dir) return
     if (relativePath.toLowerCase().startsWith('__macos')) return
 
-    const ext = relativePath.toLowerCase().substring(relativePath.lastIndexOf('.'))
-    if (IMAGE_EXTENSIONS.has(ext)) {
+    if (isComicImagePath(relativePath)) {
       imageFiles.push({ path: relativePath, entry: zipEntry, originalPage: 0 })
     }
 
@@ -502,7 +500,10 @@ async function convertCbzToXtc(
 
   const { encodedPages, mappingCtx, sampledPreviews } = await processArchiveSourcePages(
     imageFiles.length,
-    (index) => imageFiles[index].entry.async('blob'),
+    async (index) => ({
+      blob: await imageFiles[index].entry.async('blob'),
+      isJxl: isJxlPath(imageFiles[index].path),
+    }),
     (index) => getPageProcessingOptions(options, index === 0),
     (index) => imageFiles[index].originalPage,
     onProgress
@@ -554,8 +555,7 @@ async function convertCbrToXtc(
     const path = extractedFile.fileHeader.name
     if (path.toLowerCase().startsWith('__macos')) continue
 
-    const ext = path.toLowerCase().substring(path.lastIndexOf('.'))
-    if (IMAGE_EXTENSIONS.has(ext) && extractedFile.extraction) {
+    if (isComicImagePath(path) && extractedFile.extraction) {
       imageFiles.push({ path, data: extractedFile.extraction, originalPage: 0 })
     }
 
@@ -588,7 +588,10 @@ async function convertCbrToXtc(
 
   const { encodedPages, mappingCtx, sampledPreviews } = await processArchiveSourcePages(
     imageFiles.length,
-    async (index) => new Blob([new Uint8Array(imageFiles[index].data)]),
+    async (index) => ({
+      blob: new Blob([new Uint8Array(imageFiles[index].data)]),
+      isJxl: isJxlPath(imageFiles[index].path),
+    }),
     (index) => getPageProcessingOptions(options, index === 0),
     (index) => imageFiles[index].originalPage,
     onProgress
@@ -987,16 +990,25 @@ function processCanvasAsImage(
 async function processImage(
   imgBlob: Blob,
   pageNum: number,
-  options: ConversionOptions
+  options: ConversionOptions,
+  isJxl = false
 ): Promise<ProcessedPage[]> {
+  if (isJxl) {
+    try {
+      return processLoadedImage(await imageBlobToCanvas(imgBlob, true), pageNum, options)
+    } catch {
+      console.error(`Failed to load image for page ${pageNum}`)
+      return []
+    }
+  }
+
   return new Promise((resolve) => {
     const img = new Image()
     const objectUrl = URL.createObjectURL(imgBlob)
 
     img.onload = () => {
       URL.revokeObjectURL(objectUrl)
-      const pages = processLoadedImage(img, pageNum, options)
-      resolve(pages)
+      resolve(processLoadedImage(img, pageNum, options))
     }
     img.onerror = () => {
       URL.revokeObjectURL(objectUrl)
@@ -1011,7 +1023,7 @@ async function processImage(
  * Process a loaded image element
  */
 function processLoadedImage(
-  img: HTMLImageElement,
+  img: HTMLImageElement | HTMLCanvasElement,
   pageNum: number,
   options: ConversionOptions
 ): ProcessedPage[] {
