@@ -10,7 +10,8 @@
     "build:static": "VITE_API_URL=https://api.xtcjs.app/api vite build",
     "preview": "vite preview",
     "serve": "bun run server/index.ts",
-    "serve:api": "bun run server/api-only.ts"
+    "serve:api": "bun run server/api-only.ts",
+    "test": "bun test"
   },
   "dependencies": {
     "@hono/vite-dev-server": "^0.24.1",
