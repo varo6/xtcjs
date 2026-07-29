@@ -24,6 +24,20 @@ export function withoutStoredResult<T extends { id: string }>(results: T[], id: 
   return results.filter((result) => result.id !== id)
 }
 
+export async function deleteStoredResult(
+  result: Pick<StoredResult, 'id'>,
+  deletePersisted: (id: string) => Promise<void> = deleteConversion,
+): Promise<boolean> {
+  if (result.id.startsWith('mem-')) return true
+
+  try {
+    await deletePersisted(result.id)
+    return true
+  } catch {
+    return false
+  }
+}
+
 interface UseStoredResultsReturn {
   results: StoredResult[]
   recoveredResults: StoredResult[]
@@ -152,12 +166,8 @@ export function useStoredResults(): UseStoredResultsReturn {
   }, [])
 
   const removeResult = useCallback(async (result: StoredResult): Promise<boolean> => {
-    try {
-      if (!result.id.startsWith('mem-')) {
-        await deleteConversion(result.id)
-      }
-    } catch (err) {
-      console.error('Failed to remove result:', err)
+    if (!await deleteStoredResult(result)) {
+      console.error('Failed to remove result')
       return false
     }
 
