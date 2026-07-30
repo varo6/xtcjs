@@ -1136,10 +1136,6 @@
   margin-bottom: var(--space-xl);
 }
 
-.metadata-page > .section-header {
-  margin-bottom: var(--space-lg);
-}
-
 .metadata-page .dropzone {
   min-height: 300px;
   display: grid;

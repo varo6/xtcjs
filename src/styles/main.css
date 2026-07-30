@@ -381,11 +381,6 @@ body {
   border-radius: 2px;
 }
 
-.section-header h2.metadata-heading {
-  text-transform: none;
-  letter-spacing: 0.04em;
-}
-
 /* About page */
 .about-page {
   grid-column: 1 / -1;

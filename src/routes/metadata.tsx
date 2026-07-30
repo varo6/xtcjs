@@ -153,10 +153,6 @@ function MetadataEditor() {
         <p>Edit title, author, and chapter information stored in an XTC or XTCH file.</p>
       </div>
 
-      <div className="section-header">
-        <h2 className="metadata-heading">Metadata Editor (XTC/XTCH)</h2>
-      </div>
-
       {!file && (
         <div className="dropzone-wrapper">
           <Dropzone onFiles={handleFileDrop} fileType="xtc" multiple={false} />
