@@ -214,10 +214,12 @@ body {
 
 .nav-tab::before {
   content: '[ ';
+  transition: color 0.15s;
 }
 
 .nav-tab::after {
   content: ' ]';
+  transition: color 0.15s;
 }
 
 .nav-tab:hover {
@@ -226,6 +228,11 @@ body {
 
 .nav-tab.active {
   color: var(--ink);
+}
+
+.nav-tab.active::before,
+.nav-tab.active::after {
+  color: var(--accent);
 }
 
 @media (max-width: 767px) {
@@ -284,10 +291,12 @@ body {
 
 .nav-subtab::before {
   content: '[ ';
+  transition: color 0.15s;
 }
 
 .nav-subtab::after {
   content: ' ]';
+  transition: color 0.15s;
 }
 
 .nav-subtab:hover {
@@ -296,6 +305,11 @@ body {
 
 .nav-subtab.active {
   opacity: 1;
+}
+
+.nav-subtab.active::before,
+.nav-subtab.active::after {
+  color: var(--accent);
 }
 
 /* Soon placeholder */
