@@ -7,6 +7,13 @@ interface OptionsProps {
   fileType?: 'cbz' | 'pdf' | 'image' | 'video'
 }
 
+export function normalizeSplitModeForOrientation(
+  orientation: ConversionOptions['orientation'],
+  splitMode: ConversionOptions['splitMode']
+): ConversionOptions['splitMode'] {
+  return orientation === 'portrait' ? 'nosplit' : splitMode === 'fourway' ? 'overlap' : splitMode
+}
+
 export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const isImageMode = fileType === 'image'
@@ -32,9 +39,9 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
               className={options.device === 'X4' ? 'active' : ''}
               aria-pressed={options.device === 'X4'}
               onClick={() => onChange({ ...options, device: 'X4' })}
-              title="XTEink X4 (480 x 800)"
+              title="XTEink X4 / X4 Pro (480 x 800)"
             >
-              [X4]
+              [X4 / Pro]
             </button>
             <button
               type="button"
@@ -46,9 +53,6 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
               [X3]
             </button>
           </fieldset>
-          {options.device === 'X3' && (
-            <p className="device-warning">WARNING: Select only if you are using the X3 device.</p>
-          )}
         </div>
       </aside>
 
@@ -67,9 +71,7 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
               onChange({
                 ...options,
                 orientation,
-                splitMode: orientation === 'portrait' && options.splitMode !== 'fourway'
-                  ? 'nosplit'
-                  : options.splitMode
+                splitMode: normalizeSplitModeForOrientation(orientation, options.splitMode)
               })
             }}
           >
@@ -130,7 +132,7 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
               checked={options.is2bit}
               onChange={(e) => onChange({ ...options, is2bit: e.target.checked })}
             />
-            <span>2-bit grayscale (XTCH) - 4 gray levels, better shading, ~2x file size</span>
+            <span>2-bit grayscale (XTCH)</span>
           </label>
         </div>
 
@@ -162,7 +164,7 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
             >
               {options.orientation === 'landscape' && <option value="overlap">Overlapping thirds</option>}
               {options.orientation === 'landscape' && <option value="split">Split in half</option>}
-              {fileType === 'pdf' && (
+              {fileType === 'pdf' && options.orientation === 'portrait' && (
                 <option value="fourway">Two-column paper (4 pages)</option>
               )}
               <option value="nosplit">No split</option>
