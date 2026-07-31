@@ -132,7 +132,7 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
               checked={options.is2bit}
               onChange={(e) => onChange({ ...options, is2bit: e.target.checked })}
             />
-            <span>2-bit grayscale (XTCH)</span>
+            <span>2-bit grayscale (XTCH, experimental)</span>
           </label>
         </div>
 
