@@ -1,6 +1,7 @@
 import { applyDithering } from '../processing/dithering'
 import { applyContrast, calculateFourWaySegments, calculateOverlapSegments, findContentBounds, shouldSplitPage, toGrayscale } from '../processing/image'
 import { imageDataToXtg, imageDataToXth } from '../processing/xtg'
+import { decodeJxlBlob } from '../image-codec'
 import type { ConversionOptions } from '../conversion/types'
 
 interface CropRect {
@@ -14,6 +15,7 @@ interface WorkerRequest {
   jobId: number
   pageNum: number
   blob: Blob
+  isJxl: boolean
   options: ConversionOptions
   includePreview: boolean
 }
@@ -401,10 +403,10 @@ async function processBitmap(
 }
 
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
-  const { jobId, pageNum, blob, options, includePreview } = event.data
+  const { jobId, pageNum, blob, isJxl, options, includePreview } = event.data
 
   try {
-    const bitmap = await createImageBitmap(blob)
+    const bitmap = await createImageBitmap(isJxl ? await decodeJxlBlob(blob) : blob)
     try {
       const pages = await processBitmap(bitmap, pageNum, options, includePreview)
       const transferables: Transferable[] = []

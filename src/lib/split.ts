@@ -7,6 +7,7 @@ import { buildCbz, splitPdf, type OutputFormat, detectFileType } from './merge'
 import { loadPdfDocument } from './pdfjs'
 import { TARGET_WIDTH, TARGET_HEIGHT } from './processing/canvas'
 import { mapWithConcurrency } from './concurrency'
+import { imageBlobToCanvas, isComicImagePath, isJxlPath } from './image-codec'
 
 export interface PageRange {
   start: number
@@ -113,14 +114,12 @@ export async function getPageCount(file: File): Promise<number> {
 
 async function getCbzPageCount(file: File): Promise<number> {
   const zip = await JSZip.loadAsync(file)
-  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
   let count = 0
 
   zip.forEach((relativePath: string, zipEntry: any) => {
     if (zipEntry.dir) return
     if (relativePath.toLowerCase().startsWith('__macos')) return
-    const ext = relativePath.toLowerCase().substring(relativePath.lastIndexOf('.'))
-    if (imageExtensions.includes(ext)) count++
+    if (isComicImagePath(relativePath)) count++
   })
 
   return count
@@ -166,14 +165,12 @@ async function splitCbzFile(
   onProgress: (progress: SplitProgress) => void
 ): Promise<SplitResult[]> {
   const zip = await JSZip.loadAsync(file)
-  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
   const imageFiles: Array<{ path: string; entry: any }> = []
 
   zip.forEach((relativePath: string, zipEntry: any) => {
     if (zipEntry.dir) return
     if (relativePath.toLowerCase().startsWith('__macos')) return
-    const ext = relativePath.toLowerCase().substring(relativePath.lastIndexOf('.'))
-    if (imageExtensions.includes(ext)) {
+    if (isComicImagePath(relativePath)) {
       imageFiles.push({ path: relativePath, entry: zipEntry })
     }
   })
@@ -224,7 +221,7 @@ async function splitCbzFile(
       })
     } else {
       // Convert to XTC
-      const canvases = await blobsToCanvases(rangeImages.map(i => i.blob))
+      const canvases = await blobsToCanvases(rangeImages)
       const pages = canvases.map((canvas, i) => ({
         name: `${String(i).padStart(5, '0')}.png`,
         canvas: resizeCanvasForXtc(canvas),
@@ -523,28 +520,12 @@ function setBigUint64(view: DataView, offset: number, value: bigint): void {
   view.setUint32(offset + 4, Number(value >> 32n), true)
 }
 
-async function blobsToCanvases(blobs: Blob[]): Promise<HTMLCanvasElement[]> {
-  return Promise.all(blobs.map(blobToCanvas))
-}
-
-function blobToCanvas(blob: Blob): Promise<HTMLCanvasElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    const url = URL.createObjectURL(blob)
-    img.onload = () => {
-      URL.revokeObjectURL(url)
-      const canvas = document.createElement('canvas')
-      canvas.width = img.width
-      canvas.height = img.height
-      canvas.getContext('2d')!.drawImage(img, 0, 0)
-      resolve(canvas)
-    }
-    img.onerror = () => {
-      URL.revokeObjectURL(url)
-      reject(new Error('Failed to load image'))
-    }
-    img.src = url
-  })
+async function blobsToCanvases(images: Array<{ name: string; blob: Blob }>): Promise<HTMLCanvasElement[]> {
+  return mapWithConcurrency(
+    images,
+    (image) => imageBlobToCanvas(image.blob, isJxlPath(image.name)),
+    4,
+  )
 }
 
 function resizeCanvasForXtc(canvas: HTMLCanvasElement): HTMLCanvasElement {
