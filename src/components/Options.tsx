@@ -172,6 +172,21 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
           </div>
         )}
 
+        {options.splitMode === 'overlap' && (
+          <div className="option option-checkbox">
+            <label htmlFor="gutterSnap" className="checkbox-label">
+              <input
+                type="checkbox"
+                id="gutterSnap"
+                checked={options.gutterSnap}
+                onChange={(e) => onChange({ ...options, gutterSnap: e.target.checked })}
+              />
+              <span>Snap to panel gutters</span>
+            </label>
+            <div className="option-hint">Aligns segment boundaries to gaps between panels so splits don't cut through artwork</div>
+          </div>
+        )}
+
         {showPageOverview && (
           <div className="option">
             <label htmlFor="pageOverview">Page Overview</label>

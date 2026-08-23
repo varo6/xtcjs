@@ -4,7 +4,7 @@ import JSZip from 'jszip'
 import { createExtractorFromData } from 'node-unrar-js'
 import unrarWasm from 'node-unrar-js/esm/js/unrar.wasm?url'
 import { applyDithering } from './processing/dithering'
-import { toGrayscale, applyContrast, calculateOverlapSegments, calculateFourWaySegments, findContentBounds, shouldSplitPage } from './processing/image'
+import { toGrayscale, applyContrast, calculateOverlapSegments, calculateFourWaySegments, findContentBounds, shouldSplitPage, findHorizontalGutters, snapSegmentsToGutters } from './processing/image'
 import { rotateCanvas, extractAndRotate, extractRegion, resizeWithPadding, getTargetDimensions } from './processing/canvas'
 import { imageDataToXtg, imageDataToXth } from './processing/xtg'
 import { buildXtcFromXtgPages } from './xtc-format'
@@ -921,7 +921,14 @@ function processCanvasAsImage(
     }
 
     if (options.splitMode === 'overlap') {
-      const segments = calculateOverlapSegments(width, height)
+      let segments = calculateOverlapSegments(width, height)
+      if (options.gutterSnap && segments.length > 1) {
+        const gutterImageData = ctx.getImageData(0, 0, width, height)
+        const gutters = findHorizontalGutters(gutterImageData)
+        if (gutters.length > 0) {
+          segments = snapSegmentsToGutters(segments, gutters, height)
+        }
+      }
       segments.forEach((seg, idx) => {
         const letter = String.fromCharCode(97 + idx)
         const pageCanvas = extractAndRotate(canvas, seg.x, seg.y, seg.w, seg.h, landscapeRotation)
@@ -1068,7 +1075,14 @@ function processLoadedImage(
     }
 
     if (options.splitMode === 'overlap') {
-      const segments = calculateOverlapSegments(width, height)
+      let segments = calculateOverlapSegments(width, height)
+      if (options.gutterSnap && segments.length > 1) {
+        const gutterImageData = ctx.getImageData(0, 0, width, height)
+        const gutters = findHorizontalGutters(gutterImageData)
+        if (gutters.length > 0) {
+          segments = snapSegmentsToGutters(segments, gutters, height)
+        }
+      }
       segments.forEach((seg, idx) => {
         const letter = String.fromCharCode(97 + idx)
         const pageCanvas = extractAndRotate(canvas, seg.x, seg.y, seg.w, seg.h, landscapeRotation)

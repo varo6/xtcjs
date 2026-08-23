@@ -13,6 +13,7 @@ export interface ConversionOptions {
   orientation: 'landscape' | 'portrait'
   coverPortrait: boolean
   landscapeFlipClockwise: boolean
+  gutterSnap: boolean
   showProgressPreview: boolean
   imageMode: 'cover' | 'letterbox' | 'fill' | 'crop'
   videoFps: number
