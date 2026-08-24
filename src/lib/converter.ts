@@ -819,6 +819,7 @@ async function convertPdfToXtc(
   const numPages = pdf.numPages
 
   for (let i = 1; i <= numPages; i++) {
+    const pageOptions = getPageProcessingOptions(options, i === 1)
     const page = await pdf.getPage(i)
     const scale = 2.0
     const viewport = page.getViewport({ scale })
@@ -833,8 +834,8 @@ async function convertPdfToXtc(
       background: 'rgb(255,255,255)'
     }).promise
 
-    const pages = processCanvasAsImage(canvas, i, options)
-    encodedPages.push(...pages.map((page) => encodeCanvasPage(page, options.is2bit)))
+    const pages = processCanvasAsImage(canvas, i, pageOptions)
+    encodedPages.push(...pages.map((page) => encodeCanvasPage(page, pageOptions.is2bit)))
     mappingCtx.addOriginalPage(i, pages.length)
 
     const includePreview = sampledPreviews.length < MAX_STORED_PREVIEWS &&
