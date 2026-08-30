@@ -113,46 +113,47 @@
 .device-control {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
   gap: var(--space-xs);
 }
 
-.device-toggle {
-  margin: 0;
-  padding: 0;
-  border: 0;
-  display: flex;
-  gap: var(--space-xs);
+.device-select {
   width: 100%;
-}
-
-.device-toggle button {
-  flex: 1;
-  padding: 0.2rem 0.45rem;
+  min-height: 2.25rem;
+  padding: var(--space-xs) var(--space-sm);
   border: var(--border-light);
   background: var(--paper);
-  color: var(--ink-faded);
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 600;
-  line-height: 1;
-  cursor: pointer;
-  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
-}
-
-.device-toggle button:hover:not(.active) {
-  background: var(--paper-dark);
   color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
 }
 
-.device-toggle button.active {
-  background: var(--ink);
+.device-select:hover {
+  background: var(--paper-dark);
   border-color: var(--ink);
-  color: var(--paper);
 }
 
-.device-toggle button:focus-visible {
-  outline-color: var(--accent);
+.device-select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.device-notice-slot:empty {
+  display: none;
+}
+
+.device-notice {
+  margin: 0;
+  padding: var(--space-xs) var(--space-sm);
+  border-left: 3px solid var(--accent);
+  background: var(--paper);
+  color: var(--ink-light);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  line-height: 1.45;
 }
 
 .option {

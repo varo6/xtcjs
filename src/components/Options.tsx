@@ -7,6 +7,36 @@ interface OptionsProps {
   fileType?: 'cbz' | 'pdf' | 'image' | 'video'
 }
 
+interface TargetDeviceOption {
+  id: ConversionOptions['device']
+  label: string
+  size: string
+  title: string
+}
+
+const STICKY_NOTICE_ID = 'device-notice-sticky'
+
+export const TARGET_DEVICES: TargetDeviceOption[] = [
+  {
+    id: 'X4',
+    label: 'X4 / Pro',
+    size: '480 × 800',
+    title: 'XTEink X4 and X4 Pro (480 x 800)'
+  },
+  {
+    id: 'X3',
+    label: 'X3',
+    size: '528 × 792',
+    title: 'XTEink X3 (528 x 792)'
+  },
+  {
+    id: 'Sticky',
+    label: 'Sticky',
+    size: '480 × 800',
+    title: 'Seeed Studio reTerminal Sticky with CrossPoint Reader (480 x 800)'
+  }
+]
+
 export function normalizeSplitModeForOrientation(
   orientation: ConversionOptions['orientation'],
   splitMode: ConversionOptions['splitMode']
@@ -16,6 +46,8 @@ export function normalizeSplitModeForOrientation(
 
 export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const showsStickyNotice = options.device === 'Sticky'
+  const selectedDevice = TARGET_DEVICES.find(device => device.id === options.device)
   const isImageMode = fileType === 'image'
   const isVideoMode = fileType === 'video'
   const supportsSplit = !isImageMode && !isVideoMode &&
@@ -33,26 +65,31 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
         </div>
 
         <div className="device-control">
-          <fieldset className="device-toggle" aria-label="Target device">
-            <button
-              type="button"
-              className={options.device === 'X4' ? 'active' : ''}
-              aria-pressed={options.device === 'X4'}
-              onClick={() => onChange({ ...options, device: 'X4' })}
-              title="XTEink X4 / X4 Pro (480 x 800)"
-            >
-              [X4 / Pro]
-            </button>
-            <button
-              type="button"
-              className={options.device === 'X3' ? 'active' : ''}
-              aria-pressed={options.device === 'X3'}
-              onClick={() => onChange({ ...options, device: 'X3' })}
-              title="XTEink X3 (528 x 792)"
-            >
-              [X3]
-            </button>
-          </fieldset>
+          <select
+            id="targetDevice"
+            className="device-select"
+            value={options.device}
+            onChange={(event) => onChange({
+              ...options,
+              device: event.target.value as ConversionOptions['device']
+            })}
+            aria-label="Target device"
+            aria-describedby={showsStickyNotice ? STICKY_NOTICE_ID : undefined}
+            title={selectedDevice?.title}
+          >
+            {TARGET_DEVICES.map(device => (
+              <option key={device.id} value={device.id}>
+                {`[${device.label}]  ${device.size}`}
+              </option>
+            ))}
+          </select>
+          <div className="device-notice-slot" aria-live="polite">
+            {showsStickyNotice && (
+              <p className="device-notice" id={STICKY_NOTICE_ID} role="note">
+                Requires CrossPoint Reader firmware. Not compatible with the original Seeed firmware.
+              </p>
+            )}
+          </div>
         </div>
       </aside>
 

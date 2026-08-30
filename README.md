@@ -17,7 +17,7 @@
 </p>
 
 
-A free, privacy-first web app that converts your CBZ comics, PDFs, images, and videos into XTC format optimized for the XTEink X4 and X3 e-readers.
+A free, privacy-first web app that converts your CBZ comics, PDFs, images, and videos into XTC format optimized for the XTEink X4 and X3 e-readers, plus the reTerminal Sticky running CrossPoint Reader.
 
 **[Try it now!](https://xtcjs.app)** — No installation required
 
@@ -41,7 +41,7 @@ Your content is automatically processed for the best e-ink reading experience:
 -  **Smart Dithering** — Floyd-Steinberg, Atkinson, Sierra-Lite, or Ordered
 -  **Contrast Enhancement** — Make text and art crisp on grayscale displays  
 -  **Auto Page Splitting** — Two-page spreads become individual pages
--  **Perfect Sizing** — Every page fits 480×800 (X4) or 528×792 (X3)
+-  **Perfect Sizing** — Every page fits 480×800 (X4 and Sticky) or 528×792 (X3)
 
 ### 🔧 Merge & Split Tools
 
@@ -74,6 +74,8 @@ Your content is automatically processed for the best e-ink reading experience:
 4. Convert and watch the live preview
 5. Download your XTC file
 6. Transfer to your XTEink device
+
+For reTerminal Sticky, install CrossPoint Reader first. The generated XTC files are not compatible with the original Seeed firmware.
 
 ---
 
