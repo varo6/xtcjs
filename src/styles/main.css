@@ -131,6 +131,70 @@ body {
 }
 
 /* Header */
+.header-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.blog-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding-inline: var(--space-xs);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--ink-faded);
+  text-decoration: none;
+}
+
+.blog-link:hover,
+.blog-link[aria-current="page"] {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.sticky-announcement {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  font-size: 0.8rem;
+  color: var(--ink-light);
+  text-decoration: none;
+}
+
+.announcement-badge {
+  padding: 0.1rem 0.4rem;
+  background: var(--accent);
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+}
+
+.announcement-detail {
+  color: var(--ink-faded);
+}
+
+.sticky-announcement:hover .announcement-detail {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .header-actions {
+    position: static;
+    justify-content: center;
+    margin-top: var(--space-md);
+  }
+}
+
 .header {
   text-align: center;
   padding-bottom: var(--space-lg);

@@ -1,5 +1,7 @@
 import { createRootRoute, Outlet, Link, useLocation } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import { BlogLayout } from '../components/blog/BlogLayout'
+import { ThemeToggle } from '../components/ThemeToggle'
 import { MangaSearch } from '../components/MangaSearch'
 
 export const Route = createRootRoute({
@@ -27,6 +29,14 @@ function RootLayout() {
     }
   }, [isExtraRoute])
 
+  if (location.pathname === '/blog' || location.pathname.startsWith('/blog/')) {
+    return (
+      <BlogLayout theme={theme} onToggleTheme={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}>
+        <Outlet />
+      </BlogLayout>
+    )
+  }
+
   return (
     <>
       <div className="grain" />
@@ -37,45 +47,26 @@ function RootLayout() {
             <span className="logo-dot">.</span>
             <span className="logo-js">js</span>
           </div>
-          <button
-            type="button"
-            className="theme-toggle"
-            onClick={() => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))}
-            aria-label="Toggle theme"
-            title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-          >
-            {theme === 'light' ? (
+          <div className="header-actions">
+            <Link to="/blog" className="blog-link" activeProps={{ 'aria-current': 'page' }}>
+              Blog
+            </Link>
+            <ThemeToggle theme={theme} onToggle={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')} />
+            <button
+              type="button"
+              className="manga-search-trigger"
+              onClick={() => setSearchOpen(true)}
+              aria-label="Search manga"
+              title="Search manga on nyaa.si"
+            >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
-            ) : (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="5" />
-                <line x1="12" y1="1" x2="12" y2="3" />
-                <line x1="12" y1="21" x2="12" y2="23" />
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                <line x1="1" y1="12" x2="3" y2="12" />
-                <line x1="21" y1="12" x2="23" y2="12" />
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-              </svg>
-            )}
-          </button>
-          <button
-            type="button"
-            className="manga-search-trigger"
-            onClick={() => setSearchOpen(true)}
-            aria-label="Search manga"
-            title="Search manga on nyaa.si"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-          </button>
+            </button>
+          </div>
           <p className="tagline">
-            Optimized XTC Tools for your XTEink X4 · Support by starring on{' '}
+            XTC tools for your reader · Support by starring on{' '}
             <a
               href="https://github.com/varo6/xtcjs"
               target="_blank"
@@ -86,6 +77,14 @@ function RootLayout() {
             </a>{' '}
             ♥
           </p>
+          {location.pathname === '/' && (
+            <Link to="/blog/introducing-sticky" className="sticky-announcement">
+              <span className="announcement-badge">New</span>
+              <span>Sticky support</span>
+              <span className="announcement-detail">Meet reTerminal Sticky</span>
+              <span aria-hidden="true">↗</span>
+            </Link>
+          )}
         </header>
 
         <div className="nav-stack">

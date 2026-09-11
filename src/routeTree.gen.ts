@@ -17,6 +17,8 @@ import { Route as ImageRouteImport } from './routes/image'
 import { Route as Feature4RouteImport } from './routes/feature4'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BlogIndexRouteImport } from './routes/blog.index'
+import { Route as BlogIntroducingStickyRouteImport } from './routes/blog.introducing-sticky'
 
 const VideoRoute = VideoRouteImport.update({
   id: '/video',
@@ -58,6 +60,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogIndexRoute = BlogIndexRouteImport.update({
+  id: '/blog/',
+  path: '/blog/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogIntroducingStickyRoute = BlogIntroducingStickyRouteImport.update({
+  id: '/blog/introducing-sticky',
+  path: '/blog/introducing-sticky',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -68,6 +80,8 @@ export interface FileRoutesByFullPath {
   '/metadata': typeof MetadataRoute
   '/pdf': typeof PdfRoute
   '/video': typeof VideoRoute
+  '/blog/introducing-sticky': typeof BlogIntroducingStickyRoute
+  '/blog/': typeof BlogIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -78,6 +92,8 @@ export interface FileRoutesByTo {
   '/metadata': typeof MetadataRoute
   '/pdf': typeof PdfRoute
   '/video': typeof VideoRoute
+  '/blog/introducing-sticky': typeof BlogIntroducingStickyRoute
+  '/blog': typeof BlogIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -89,6 +105,8 @@ export interface FileRoutesById {
   '/metadata': typeof MetadataRoute
   '/pdf': typeof PdfRoute
   '/video': typeof VideoRoute
+  '/blog/introducing-sticky': typeof BlogIntroducingStickyRoute
+  '/blog/': typeof BlogIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,6 +119,8 @@ export interface FileRouteTypes {
     | '/metadata'
     | '/pdf'
     | '/video'
+    | '/blog/introducing-sticky'
+    | '/blog/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -111,6 +131,8 @@ export interface FileRouteTypes {
     | '/metadata'
     | '/pdf'
     | '/video'
+    | '/blog/introducing-sticky'
+    | '/blog'
   id:
     | '__root__'
     | '/'
@@ -121,6 +143,8 @@ export interface FileRouteTypes {
     | '/metadata'
     | '/pdf'
     | '/video'
+    | '/blog/introducing-sticky'
+    | '/blog/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -132,6 +156,8 @@ export interface RootRouteChildren {
   MetadataRoute: typeof MetadataRoute
   PdfRoute: typeof PdfRoute
   VideoRoute: typeof VideoRoute
+  BlogIntroducingStickyRoute: typeof BlogIntroducingStickyRoute
+  BlogIndexRoute: typeof BlogIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -192,6 +218,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blog/': {
+      id: '/blog/'
+      path: '/blog'
+      fullPath: '/blog/'
+      preLoaderRoute: typeof BlogIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/introducing-sticky': {
+      id: '/blog/introducing-sticky'
+      path: '/blog/introducing-sticky'
+      fullPath: '/blog/introducing-sticky'
+      preLoaderRoute: typeof BlogIntroducingStickyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -204,6 +244,8 @@ const rootRouteChildren: RootRouteChildren = {
   MetadataRoute: MetadataRoute,
   PdfRoute: PdfRoute,
   VideoRoute: VideoRoute,
+  BlogIntroducingStickyRoute: BlogIntroducingStickyRoute,
+  BlogIndexRoute: BlogIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

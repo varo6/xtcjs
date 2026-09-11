@@ -38,7 +38,7 @@ export default defineConfig({
       manifest: {
         name: 'XTC.js - CBZ & PDF to XTC Converter',
         short_name: 'XTC.js',
-        description: 'Convert CBZ comics and PDF documents to XTC format for your XTEink X4 e-reader.',
+        description: 'Convert CBZ comics and PDF documents to XTC format for your reader.',
         theme_color: '#fafafa',
         background_color: '#fafafa',
         display: 'standalone',

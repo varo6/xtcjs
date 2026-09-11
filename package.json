@@ -1,7 +1,7 @@
 {
   "name": "xtcjs",
   "version": "1.0.0",
-  "description": "Browser-based CBZ to XTC converter for XTEink X4",
+  "description": "Browser-based CBZ to XTC converter for Your Reader",
   "type": "module",
   "private": true,
   "scripts": {

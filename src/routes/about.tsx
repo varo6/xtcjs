@@ -11,8 +11,17 @@ function AboutPage() {
         <h1>About XTC.js</h1>
         <p>
           XTC.js is a free, browser-based converter that transforms your CBZ comic archives and PDF documents
-          into XTC format, optimized for the <strong>XTEink X4 e-reader</strong>. 
-          It runs entirely in your browser — your files never leave your device, ensuring complete privacy.
+          into XTC format for <strong>your reader</strong>.
+          It runs entirely in your browser. Your files never leave your device.
+        </p>
+      </section>
+
+      <section className="content-section">
+        <h2>Supported readers</h2>
+        <p>
+          Choose XTEink X4 or X4 Pro, XTEink X3, or reTerminal Sticky in the device selector.
+          Sticky requires CrossPoint Reader firmware. The generated XTC files are not compatible
+          with the original Seeed firmware.
         </p>
       </section>
 
@@ -33,18 +42,17 @@ function AboutPage() {
         <h2>How It Works</h2>
         <ol className="steps-list">
           <li><strong>Select files:</strong> Drag and drop your CBZ or PDF files, or click to browse.</li>
-          <li><strong>Adjust settings:</strong> Choose your preferred dithering algorithm and contrast level.</li>
+          <li><strong>Adjust settings:</strong> Select your reader, then choose your preferred dithering algorithm and contrast level.</li>
           <li><strong>Convert:</strong> Click the convert button and watch the real-time preview.</li>
-          <li><strong>Download:</strong> Save your XTC files and transfer them to your XTEink X4.</li>
+          <li><strong>Download:</strong> Save your XTC files and transfer them to your reader.</li>
         </ol>
       </section>
 
       <section className="content-section">
         <h2>About the XTC Format</h2>
         <p>
-          XTC is the native format for the XTEink X4 e-reader. It contains optimized 1-bit (black and white)
-          images at 480×800 resolution, specifically designed for e-ink displays. The format uses efficient
-          compression to minimize file size while maintaining excellent readability for manga, comics, and documents.
+          XTC stores 1-bit black and white page images for compatible e-ink readers.
+          XTC.js sizes each page for the reader you select: 480×800 for X4 and Sticky, or 528×792 for X3.
         </p>
       </section>
 
@@ -60,7 +68,7 @@ function AboutPage() {
         </details>
         <details className="faq-item">
           <summary>Why are my pages split in half?</summary>
-          <p>The XTEink X4 has a portrait display (480×800). When you upload a landscape image (like a two-page spread), XTC.js automatically splits it into two pages for optimal reading.</p>
+          <p>Landscape images, such as two-page spreads, can be split to fit your reader. Choose a split mode in the conversion settings, or select "No split" to keep each spread together.</p>
         </details>
         <details className="faq-item">
           <summary>Can I use this on mobile?</summary>
