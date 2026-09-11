@@ -231,9 +231,6 @@
 }
 
 .manga-search-trigger {
-  position: absolute;
-  right: 0;
-  top: 0;
   width: 32px;
   height: 32px;
   display: flex;
@@ -258,9 +255,6 @@
 }
 
 .theme-toggle {
-  position: absolute;
-  right: 40px;
-  top: 0;
   width: 32px;
   height: 32px;
   display: flex;

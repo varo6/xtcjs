@@ -1,4 +1,4 @@
-// XTC format reader/parser for XTEink e-readers
+// XTC format reader/parser for compatible e-ink readers
 
 import type { BookMetadata } from './metadata/types'
 

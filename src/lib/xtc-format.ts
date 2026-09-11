@@ -1,4 +1,4 @@
-// XTC format generation for XTEink X4 e-reader
+// XTC format generation for compatible e-ink readers
 
 import type { BookMetadata, TocEntry } from './metadata/types';
 import { imageDataToXtg } from './processing/xtg';
