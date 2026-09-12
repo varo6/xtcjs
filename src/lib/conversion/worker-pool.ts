@@ -16,6 +16,7 @@ interface QueueJob {
   id: number
   pageNum: number
   blob: Blob
+  isJxl: boolean
   options: ConversionOptions
   includePreview: boolean
   resolve: (pages: WorkerProcessedPage[]) => void
@@ -82,6 +83,7 @@ export class ConvertWorkerPool {
   processPage(
     pageNum: number,
     blob: Blob,
+    isJxl: boolean,
     options: ConversionOptions,
     includePreview: boolean
   ): Promise<WorkerProcessedPage[]> {
@@ -94,6 +96,7 @@ export class ConvertWorkerPool {
         id: this.nextJobId++,
         pageNum,
         blob,
+        isJxl,
         options,
         includePreview,
         resolve,
@@ -136,6 +139,7 @@ export class ConvertWorkerPool {
         jobId: job.id,
         pageNum: job.pageNum,
         blob: job.blob,
+        isJxl: job.isJxl,
         options: job.options,
         includePreview: job.includePreview
       })
