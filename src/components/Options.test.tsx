@@ -31,6 +31,7 @@ function renderPdfOptions(
     orientation,
     coverPortrait: false,
     landscapeFlipClockwise: false,
+    gutterSnap: true,
     showProgressPreview: false,
     imageMode: 'letterbox',
     videoFps: 1,

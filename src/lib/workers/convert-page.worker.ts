@@ -1,5 +1,5 @@
 import { applyDithering } from '../processing/dithering'
-import { applyContrast, calculateFourWaySegments, calculateOverlapSegments, findContentBounds, shouldSplitPage, toGrayscale } from '../processing/image'
+import { applyContrast, calculateFourWaySegments, calculateOverlapSegments, findContentBounds, findHorizontalGutters, shouldSplitPage, snapSegmentsToGutters, toGrayscale } from '../processing/image'
 import { imageDataToXtg, imageDataToXth } from '../processing/xtg'
 import type { ConversionOptions } from '../conversion/types'
 
@@ -285,7 +285,15 @@ async function processBitmap(
     }
 
     if (options.splitMode === 'overlap') {
-      const segments = calculateOverlapSegments(width, height)
+      let segments = calculateOverlapSegments(width, height)
+      if (options.gutterSnap && segments.length > 1) {
+        const ctx = asCanvas2d(baseCanvas.getContext('2d', { alpha: false })!)
+        const gutterImageData = ctx.getImageData(0, 0, width, height)
+        const gutters = findHorizontalGutters(gutterImageData)
+        if (gutters.length > 0) {
+          segments = snapSegmentsToGutters(segments, gutters, height)
+        }
+      }
       for (let idx = 0; idx < segments.length; idx++) {
         const seg = segments[idx]
         const letter = String.fromCharCode(97 + idx)

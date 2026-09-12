@@ -126,6 +126,102 @@ export function calculateOverlapSegments(
   return segments;
 }
 
+type Segment = { x: number; y: number; w: number; h: number }
+
+/**
+ * Detect horizontal gutters (white strips between panel rows) in a grayscale page.
+ * Scans each row for average brightness; runs of bright rows above a minimum
+ * height are treated as gutters. Returns the Y center of each gutter band.
+ *
+ * Works without OpenCV — pure pixel scanning, browser-compatible.
+ */
+export function findHorizontalGutters(
+  imageData: ImageData,
+  whiteThreshold = 240,
+  minGutterHeight = 4
+): number[] {
+  const { data, width, height } = imageData
+  const margin = Math.floor(width * 0.05)
+  const scanWidth = width - 2 * margin
+
+  const rowBrightness = new Float32Array(height)
+  for (let y = 0; y < height; y++) {
+    let sum = 0
+    const rowOffset = y * width * 4
+    for (let x = margin; x < margin + scanWidth; x++) {
+      sum += data[rowOffset + x * 4]
+    }
+    rowBrightness[y] = sum / scanWidth
+  }
+
+  const gutters: number[] = []
+  let runStart = -1
+
+  for (let y = 0; y < height; y++) {
+    if (rowBrightness[y] >= whiteThreshold) {
+      if (runStart < 0) runStart = y
+    } else {
+      if (runStart >= 0) {
+        const runHeight = y - runStart
+        if (runHeight >= minGutterHeight) {
+          gutters.push(Math.floor(runStart + runHeight / 2))
+        }
+        runStart = -1
+      }
+    }
+  }
+
+  return gutters
+}
+
+/**
+ * Snap overlap segment boundaries to the nearest panel gutter so segments
+ * don't cut through panels. Each segment start is moved to the closest
+ * gutter within 15% of the segment height. Gutters are consumed so no
+ * two segments snap to the same one.
+ */
+export function snapSegmentsToGutters(
+  segments: Segment[],
+  gutters: number[],
+  pageHeight: number
+): Segment[] {
+  if (!gutters.length || segments.length <= 1) return segments
+
+  const segmentHeight = segments[0].h
+  const threshold = segmentHeight * 0.15
+  const width = segments[0].w
+  const starts = segments.map(s => s.y)
+
+  const usedGutters = new Set<number>()
+  for (let i = 1; i < starts.length; i++) {
+    let bestDist = threshold + 1
+    let bestIdx = -1
+    let bestY = starts[i]
+
+    for (let gi = 0; gi < gutters.length; gi++) {
+      if (usedGutters.has(gi)) continue
+      const dist = Math.abs(gutters[gi] - starts[i])
+      if (dist < bestDist) {
+        bestDist = dist
+        bestIdx = gi
+        bestY = gutters[gi]
+      }
+    }
+
+    if (bestDist <= threshold && bestIdx >= 0) {
+      usedGutters.add(bestIdx)
+      starts[i] = bestY
+    }
+  }
+
+  return starts.map((y, i) => ({
+    x: 0,
+    y,
+    w: width,
+    h: i === starts.length - 1 ? pageHeight - y : segmentHeight
+  }))
+}
+
 /**
  * Find the tight bounds around non-white content in a grayscale image.
  */
