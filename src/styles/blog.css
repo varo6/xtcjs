@@ -154,7 +154,7 @@
 .journal-prose p + p { margin-top: 16px; }
 .journal-prose ol { padding-left: 24px; margin-block: 20px; }
 .journal-prose li { padding-left: 8px; margin-bottom: 10px; }
-.journal-note { background: var(--paper-dark); border-left: 2px solid var(--ink-faded); padding: 18px 22px; font-size: 15px; }
+.journal-prose .info-note { background: var(--paper-dark); padding: 14px; font-size: 13px; }
 .journal-cta { display: inline-block; margin-top: 24px; font-size: 14px; }
 .journal-footer { display: flex; justify-content: space-between; gap: 24px; padding-block: 24px; border-top: 1px solid var(--paper-dark); color: var(--ink-faded); font-size: 11px; }
 .journal-footer > div { display: flex; gap: 24px; }

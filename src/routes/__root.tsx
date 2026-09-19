@@ -71,20 +71,18 @@ function RootLayout() {
               href="https://github.com/varo6/xtcjs"
               target="_blank"
               rel="noopener"
-              style={{ color: 'inherit' }}
             >
               GitHub
             </a>{' '}
             ♥
           </p>
-          {location.pathname === '/' && (
-            <Link to="/blog/introducing-sticky" className="sticky-announcement">
-              <span className="announcement-badge">New</span>
-              <span>Sticky support</span>
-              <span className="announcement-detail">Meet reTerminal Sticky</span>
-              <span aria-hidden="true">↗</span>
+          <div className="sticky-announcement">
+            <span className="announcement-badge">New</span>
+            <span>Sticky support</span>
+            <Link to="/blog/introducing-sticky" className="announcement-detail">
+              Meet reTerminal Sticky <span aria-hidden="true">↗</span>
             </Link>
-          )}
+          </div>
         </header>
 
         <div className="nav-stack">
