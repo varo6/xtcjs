@@ -4,7 +4,7 @@ import JSZip from 'jszip'
 import { createExtractorFromData } from 'node-unrar-js'
 import unrarWasm from 'node-unrar-js/esm/js/unrar.wasm?url'
 import { applyDithering } from './processing/dithering'
-import { toGrayscale, applyContrast, calculateOverlapSegments, calculateFourWaySegments, findContentBounds, shouldSplitPage } from './processing/image'
+import { toGrayscale, applyContrast, calculateOverlapSegments, calculateFourWaySegments, calculateSpreadSegments, findContentBounds, shouldSplitPage } from './processing/image'
 import { rotateCanvas, extractAndRotate, extractRegion, resizeWithPadding, getTargetDimensions } from './processing/canvas'
 import { imageDataToXtg, imageDataToXth } from './processing/xtg'
 import { buildXtcFromXtgPages } from './xtc-format'
@@ -896,7 +896,7 @@ function processCanvasAsImage(
 
   toGrayscale(ctx, width, height)
 
-  const shouldSplit = shouldSplitPage(width, height, options.orientation, options.splitMode)
+  const shouldSplit = shouldSplitPage(width, height, options.orientation, options.splitMode, options.splitSpreads)
 
   if (options.orientation === 'portrait' && !shouldSplit) {
     const finalCanvas = applyImageMode(
@@ -921,8 +921,13 @@ function processCanvasAsImage(
       results.push(buildOverviewPage(canvas, pageNum, targetWidth, targetHeight, options, landscapeRotation))
     }
 
-    if (options.splitMode === 'overlap') {
-      const segments = calculateOverlapSegments(width, height)
+    const spreadSegments = options.splitSpreads
+      ? calculateSpreadSegments(width, height, options.splitMode, targetWidth, targetHeight)
+      : []
+    if (options.splitMode === 'overlap' || spreadSegments.length > 0) {
+      const segments = spreadSegments.length > 0
+        ? spreadSegments
+        : calculateOverlapSegments(width, height, targetWidth, targetHeight)
       segments.forEach((seg, idx) => {
         const letter = String.fromCharCode(97 + idx)
         const pageCanvas = extractAndRotate(canvas, seg.x, seg.y, seg.w, seg.h, landscapeRotation)
@@ -1043,7 +1048,7 @@ function processLoadedImage(
 
   toGrayscale(ctx, width, height)
 
-  const shouldSplit = shouldSplitPage(width, height, options.orientation, options.splitMode)
+  const shouldSplit = shouldSplitPage(width, height, options.orientation, options.splitMode, options.splitSpreads)
 
   if (options.orientation === 'portrait' && !shouldSplit) {
     const finalCanvas = applyImageMode(
@@ -1068,8 +1073,13 @@ function processLoadedImage(
       results.push(buildOverviewPage(canvas, pageNum, targetWidth, targetHeight, options, landscapeRotation))
     }
 
-    if (options.splitMode === 'overlap') {
-      const segments = calculateOverlapSegments(width, height)
+    const spreadSegments = options.splitSpreads
+      ? calculateSpreadSegments(width, height, options.splitMode, targetWidth, targetHeight)
+      : []
+    if (options.splitMode === 'overlap' || spreadSegments.length > 0) {
+      const segments = spreadSegments.length > 0
+        ? spreadSegments
+        : calculateOverlapSegments(width, height, targetWidth, targetHeight)
       segments.forEach((seg, idx) => {
         const letter = String.fromCharCode(97 + idx)
         const pageCanvas = extractAndRotate(canvas, seg.x, seg.y, seg.w, seg.h, landscapeRotation)

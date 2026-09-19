@@ -22,6 +22,7 @@ function renderPdfOptions(
   const options: ConversionOptions = {
     device,
     splitMode: 'nosplit',
+    splitSpreads: false,
     pageOverview: 'none',
     dithering: 'atkinson',
     is2bit: false,

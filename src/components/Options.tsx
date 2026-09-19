@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { ConversionOptions } from '../lib/converter'
+import { InfoNote } from './InfoNote'
 
 interface OptionsProps {
   options: ConversionOptions
@@ -15,6 +16,7 @@ interface TargetDeviceOption {
 }
 
 const STICKY_NOTICE_ID = 'device-notice-sticky'
+const SPREAD_NOTICE_ID = 'spread-splitting-note'
 
 export const TARGET_DEVICES: TargetDeviceOption[] = [
   {
@@ -85,9 +87,9 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
           </select>
           <div className="device-notice-slot" aria-live="polite">
             {showsStickyNotice && (
-              <p className="device-notice" id={STICKY_NOTICE_ID} role="note">
+              <InfoNote id={STICKY_NOTICE_ID}>
                 Requires CrossPoint Reader firmware. Not compatible with the original Seeed firmware.
-              </p>
+              </InfoNote>
             )}
           </div>
         </div>
@@ -206,6 +208,28 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
               )}
               <option value="nosplit">No split</option>
             </select>
+          </div>
+        )}
+
+        {fileType === 'cbz' && options.orientation === 'landscape' && options.splitMode !== 'nosplit' && (
+          <div className="option option-checkbox">
+            <label htmlFor="splitSpreads" className="checkbox-label">
+              <input
+                type="checkbox"
+                id="splitSpreads"
+                checked={options.splitSpreads}
+                aria-describedby={options.splitSpreads ? SPREAD_NOTICE_ID : undefined}
+                onChange={(e) => onChange({ ...options, splitSpreads: e.target.checked })}
+              />
+              <span>Split wide pages (right to left)</span>
+            </label>
+            <div className="spread-notice-slot" aria-live="polite">
+              {options.splitSpreads && (
+                <InfoNote id={SPREAD_NOTICE_ID}>
+                  Wide spreads become more pages, making text and panel details larger and easier to read.
+                </InfoNote>
+              )}
+            </div>
           </div>
         )}
 

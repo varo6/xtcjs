@@ -1,5 +1,5 @@
 import { applyDithering } from '../processing/dithering'
-import { applyContrast, calculateFourWaySegments, calculateOverlapSegments, findContentBounds, shouldSplitPage, toGrayscale } from '../processing/image'
+import { applyContrast, calculateFourWaySegments, calculateSpreadSegments, calculateOverlapSegments, findContentBounds, shouldSplitPage, toGrayscale } from '../processing/image'
 import { imageDataToXtg, imageDataToXth } from '../processing/xtg'
 import type { ConversionOptions } from '../conversion/types'
 
@@ -245,7 +245,7 @@ async function processBitmap(
 
   toGrayscale(asCanvas2d(baseCtx), width, height)
 
-  const shouldSplit = shouldSplitPage(width, height, options.orientation, options.splitMode)
+  const shouldSplit = shouldSplitPage(width, height, options.orientation, options.splitMode, options.splitSpreads)
 
   if (options.orientation === 'portrait' && !shouldSplit) {
     const finalCanvas = resizeWithPadding(baseCanvas, 255, targetWidth, targetHeight)
@@ -284,8 +284,13 @@ async function processBitmap(
       previewAssigned = true
     }
 
-    if (options.splitMode === 'overlap') {
-      const segments = calculateOverlapSegments(width, height)
+    const spreadSegments = options.splitSpreads
+      ? calculateSpreadSegments(width, height, options.splitMode, targetWidth, targetHeight)
+      : []
+    if (options.splitMode === 'overlap' || spreadSegments.length > 0) {
+      const segments = spreadSegments.length > 0
+        ? spreadSegments
+        : calculateOverlapSegments(width, height, targetWidth, targetHeight)
       for (let idx = 0; idx < segments.length; idx++) {
         const seg = segments[idx]
         const letter = String.fromCharCode(97 + idx)

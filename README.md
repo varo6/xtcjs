@@ -96,6 +96,12 @@ For reTerminal Sticky, install CrossPoint Reader first. The generated XTC files 
 | Split | Overlapping thirds |
 | Orientation | Landscape |
 
+With **Split wide pages (right to left)** enabled, wide CBZ/CBR images are
+treated as double-page spreads. Each half uses the selected thirds/halves
+split, starting with the right page. The first image stays whole for the cover.
+Uncheck this option to keep panoramic artwork together, or choose **No split**
+to keep every source page whole. This is geometric splitting, not panel detection.
+
 ### PDFs and documents
 
 | Setting | Value |

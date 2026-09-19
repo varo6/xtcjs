@@ -132,7 +132,7 @@
 }
 
 .device-select:hover {
-  background: var(--paper-dark);
+  background: var(--control-hover);
   border-color: var(--ink);
 }
 
@@ -141,19 +141,24 @@
   outline-offset: 1px;
 }
 
-.device-notice-slot:empty {
+.device-notice-slot:empty,
+.spread-notice-slot:empty {
   display: none;
 }
 
-.device-notice {
+.spread-notice-slot:not(:empty) {
+  margin-top: var(--space-sm);
+}
+
+.info-note {
   margin: 0;
-  padding: var(--space-xs) var(--space-sm);
-  border-left: 3px solid var(--accent);
+  padding: var(--space-sm);
+  border-left: 2px solid var(--accent);
   background: var(--paper);
-  color: var(--ink-light);
+  color: var(--ink);
   font-family: var(--font-mono);
   font-size: 0.7rem;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .option {
@@ -189,7 +194,7 @@
 
 .option select:hover,
 .option input:not([type="checkbox"]):hover {
-  background: var(--paper-dark);
+  background: var(--control-hover);
 }
 
 .option select:focus-visible,

@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { BlogArticle } from '../components/blog/BlogArticle'
 import { StickyBanner } from '../components/blog/StickyBanner'
 import { stickyPost } from '../lib/blog'
+import { InfoNote } from '../components/InfoNote'
 
 export const Route = createFileRoute('/blog/introducing-sticky')({
   component: StickyPost,
@@ -25,10 +26,10 @@ function StickyPost() {
       </section>
       <section>
         <h2>Using reTerminal Sticky</h2>
-        <p className="journal-note">
+        <InfoNote>
           Sticky requires CrossPoint Reader firmware. The XTC files created here are
           not compatible with the original Seeed firmware.
-        </p>
+        </InfoNote>
         <ol>
           <li>Install CrossPoint Reader on your reTerminal Sticky.</li>
           <li>Open a converter and select Sticky in the device selector.</li>
