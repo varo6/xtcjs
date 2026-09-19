@@ -2,6 +2,7 @@
   /* Paper & ink palette */
   --paper: #f8f4eb;
   --paper-dark: #ece5d8;
+  --control-hover: #fffdf8;
   --ink: #1e1a17;
   --ink-light: #504941;
   --ink-faded: #746c63;
@@ -38,6 +39,7 @@
   color-scheme: dark;
   --paper: #191714;
   --paper-dark: #28241f;
+  --control-hover: #28241f;
   --ink: #f7f0e5;
   --ink-light: #d8cec0;
   --ink-faded: #aaa094;
@@ -152,6 +154,7 @@ body {
 }
 
 .blog-link:hover,
+.blog-link:focus-visible,
 .blog-link[aria-current="page"] {
   color: var(--ink);
   text-decoration: underline;
@@ -180,11 +183,9 @@ body {
 
 .announcement-detail {
   color: var(--ink-faded);
-}
-
-.sticky-announcement:hover .announcement-detail {
-  color: var(--ink);
   text-decoration: underline;
+  text-underline-offset: 4px;
+  white-space: nowrap;
 }
 
 @media (max-width: 600px) {
@@ -234,6 +235,10 @@ body {
   max-width: 60ch;
   margin-left: auto;
   margin-right: auto;
+}
+
+.tagline a {
+  color: inherit;
 }
 
 .tagline em {
@@ -286,16 +291,12 @@ body {
   transition: color 0.15s;
 }
 
-.nav-tab:hover {
+.nav-tab:is(.active, :hover, :focus-visible) {
   color: var(--ink);
 }
 
-.nav-tab.active {
-  color: var(--ink);
-}
-
-.nav-tab.active::before,
-.nav-tab.active::after {
+.nav-tab:is(.active, :hover, :focus-visible)::before,
+.nav-tab:is(.active, :hover, :focus-visible)::after {
   color: var(--accent);
 }
 
@@ -363,16 +364,12 @@ body {
   transition: color 0.15s;
 }
 
-.nav-subtab:hover {
+.nav-subtab:is(.active, :hover, :focus-visible) {
   opacity: 1;
 }
 
-.nav-subtab.active {
-  opacity: 1;
-}
-
-.nav-subtab.active::before,
-.nav-subtab.active::after {
+.nav-subtab:is(.active, :hover, :focus-visible)::before,
+.nav-subtab:is(.active, :hover, :focus-visible)::after {
   color: var(--accent);
 }
 
@@ -588,8 +585,12 @@ body {
   transition: border-color 0.2s;
 }
 
-.footer a:hover {
-  border-color: var(--ink-light);
+.footer a:is(:hover, :focus-visible) {
+  border-color: var(--accent);
+}
+
+.layout a:not(.nav-tab, .nav-subtab):is(:hover, :focus-visible) {
+  color: var(--accent);
 }
 
 /* Utility */

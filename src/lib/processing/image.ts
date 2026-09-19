@@ -95,10 +95,14 @@ export function applyContrast(
  */
 export function calculateOverlapSegments(
   width: number,
-  height: number
+  height: number,
+  targetWidth = 480,
+  targetHeight = 800
 ): Array<{ x: number; y: number; w: number; h: number }> {
-  const scale = 800 / width;
-  const segmentHeight = Math.floor(480 / scale);
+  const scale = targetHeight / width;
+  const segmentHeight = Math.max(1, Math.floor(targetWidth / scale));
+
+  if (segmentHeight >= height) return [{ x: 0, y: 0, w: width, h: height }];
 
   let numSegments = 3;
   let shift = 0;
@@ -124,6 +128,31 @@ export function calculateOverlapSegments(
   }
 
   return segments;
+}
+
+/** Split wide manga into right then left pages before applying the landscape crop. */
+export function calculateSpreadSegments(
+  width: number,
+  height: number,
+  splitMode: 'overlap' | 'split' | 'fourway' | 'nosplit',
+  targetWidth = 480,
+  targetHeight = 800
+): Array<{ x: number; y: number; w: number; h: number }> {
+  if (width <= height || (splitMode !== 'overlap' && splitMode !== 'split')) return []
+
+  const middle = Math.floor(width / 2)
+  const columns = [{ x: middle, w: width - middle }, { x: 0, w: middle }]
+  return columns.flatMap(({ x, w }) => {
+    if (height === 1) return [{ x, y: 0, w, h: height }]
+    const halfHeight = Math.floor(height / 2)
+    const segments = splitMode === 'overlap'
+      ? calculateOverlapSegments(w, height, targetWidth, targetHeight)
+      : [
+          { x: 0, y: 0, w, h: halfHeight },
+          { x: 0, y: halfHeight, w, h: height - halfHeight }
+        ]
+    return segments.map(segment => ({ ...segment, x }))
+  })
 }
 
 /**
@@ -199,9 +228,11 @@ export function shouldSplitPage(
   width: number,
   height: number,
   orientation: 'landscape' | 'portrait',
-  splitMode: 'overlap' | 'split' | 'fourway' | 'nosplit'
+  splitMode: 'overlap' | 'split' | 'fourway' | 'nosplit',
+  splitSpreads = false
 ): boolean {
   return orientation === 'portrait'
     ? splitMode === 'fourway'
-    : width < height && splitMode !== 'nosplit'
+    : (width < height && splitMode !== 'nosplit') ||
+      (splitSpreads && width > height && (splitMode === 'overlap' || splitMode === 'split'))
 }

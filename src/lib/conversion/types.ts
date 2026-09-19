@@ -4,6 +4,7 @@ export type PageOverviewMode = 'none' | 'portrait' | 'landscape'
 export interface ConversionOptions {
   device: 'X4' | 'X3' | 'Sticky'
   splitMode: SplitMode
+  splitSpreads: boolean
   pageOverview: PageOverviewMode
   dithering: string
   is2bit: boolean
