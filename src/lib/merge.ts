@@ -7,11 +7,10 @@ import { extractXtcPages, extractXtcRawPages, parseXtcFile } from './xtc-reader'
 import { loadPdfDocument } from './pdfjs'
 import { TARGET_WIDTH, TARGET_HEIGHT } from './processing/canvas'
 import { mapWithConcurrency } from './concurrency'
+import { imageBlobToCanvas, isComicImagePath, isJxlPath } from './image-codec'
 
 export type FileType = 'cbz' | 'cbr' | 'pdf' | 'xtc' | 'unknown'
 export type OutputFormat = 'xtc' | 'cbz' | 'pdf'
-
-const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'])
 
 export interface MergeResult {
   name: string
@@ -123,8 +122,7 @@ async function mergeCbzFiles(
       if (zipEntry.dir) return
       if (relativePath.toLowerCase().startsWith('__macos')) return
 
-      const ext = relativePath.toLowerCase().substring(relativePath.lastIndexOf('.'))
-      if (IMAGE_EXTENSIONS.has(ext)) {
+      if (isComicImagePath(relativePath)) {
         imageFiles.push({ path: relativePath, entry: zipEntry })
       }
     })
@@ -165,7 +163,7 @@ async function mergeCbzFiles(
     }
   } else {
     // Convert to XTC
-    const canvases = await imageBlobsToCanvases(allImages.map(img => img.blob), (i, total, preview) => {
+    const canvases = await imageBlobsToCanvases(allImages, (i, total, preview) => {
       onProgress({
         file: 'Converting to XTC',
         fileIndex: files.length - 1,
@@ -511,45 +509,18 @@ function setBigUint64(view: DataView, offset: number, value: bigint): void {
  * Convert image blobs to canvases (resized for XTC)
  */
 async function imageBlobsToCanvases(
-  blobs: Blob[],
+  images: Array<{ name: string; blob: Blob }>,
   onProgress: (index: number, total: number, preview?: string) => void
 ): Promise<HTMLCanvasElement[]> {
   let completedImages = 0
-  return mapWithConcurrency(blobs, async (blob) => {
-    const canvas = await blobToCanvas(blob)
+  return mapWithConcurrency(images, async (image) => {
+    const canvas = await imageBlobToCanvas(image.blob, isJxlPath(image.name))
     const resized = resizeCanvasForXtc(canvas)
 
     completedImages++
-    onProgress(completedImages, blobs.length, resized.toDataURL('image/png'))
+    onProgress(completedImages, images.length, resized.toDataURL('image/png'))
     return resized
   }, 4)
-}
-
-/**
- * Convert blob to canvas
- */
-function blobToCanvas(blob: Blob): Promise<HTMLCanvasElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    const url = URL.createObjectURL(blob)
-
-    img.onload = () => {
-      URL.revokeObjectURL(url)
-      const canvas = document.createElement('canvas')
-      canvas.width = img.width
-      canvas.height = img.height
-      const ctx = canvas.getContext('2d')!
-      ctx.drawImage(img, 0, 0)
-      resolve(canvas)
-    }
-
-    img.onerror = () => {
-      URL.revokeObjectURL(url)
-      reject(new Error('Failed to load image'))
-    }
-
-    img.src = url
-  })
 }
 
 /**
