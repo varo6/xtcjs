@@ -164,7 +164,7 @@ function getPageProcessingOptions(
   let coverOptions = baseOptions
 
   // Crosspoint uses XTC page 0 as the home preview, so keep cover full-size.
-  if (coverOptions.splitMode !== 'nosplit') {
+  if (!coverOptions.applySplitToCover && coverOptions.splitMode !== 'nosplit') {
     coverOptions = { ...coverOptions, splitMode: 'nosplit' }
   }
 
