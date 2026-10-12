@@ -1,36 +1,34 @@
-# use the official Bun image
-# see all versions at https://hub.docker.com/r/oven/bun/tags
-FROM oven/bun:1 AS base
+# Multi-stage build for building and bundling
+FROM oven/bun:1 AS builder
 WORKDIR /usr/src/app
 
-# install dependencies into temp directory
-# this will cache them and speed up future builds
-FROM base AS install
-RUN mkdir -p /temp/dev
-COPY package.json bun.lock /temp/dev/
-RUN cd /temp/dev && bun install --frozen-lockfile
+# Copy dependency configuration files
+COPY package.json bun.lock ./
 
-# copy node_modules from temp directory
-# then copy all (non-ignored) project files into the image
-FROM base AS prerelease
-COPY --from=install /temp/dev/node_modules node_modules
+# Install all dependencies (including devDependencies) to build the app
+RUN bun install --frozen-lockfile
+
+# Copy the rest of the project source code
 COPY . .
 
-# build the app
+# Build the frontend static assets (outputs to /usr/src/app/dist)
 ENV NODE_ENV=production
 RUN bun run build
 
-# final image with only production assets
-FROM base AS release
-COPY --from=install /temp/dev/node_modules node_modules
-COPY --from=prerelease /usr/src/app/dist dist
-COPY --from=prerelease /usr/src/app/server server
-COPY --from=prerelease /usr/src/app/package.json .
+# Bundle the server code and Hono dependencies into a single file (dist/server.js)
+RUN bun build --target=bun server/index.ts --outfile=dist/server.js
 
-# create data directory for SQLite persistence
+# Final production stage using Bun on Alpine Linux
+FROM oven/bun:1-alpine AS release
+WORKDIR /usr/src/app
+
+# Copy only the compiled client assets and the bundled server code
+COPY --from=builder /usr/src/app/dist dist
+
+# Create data directory for SQLite persistence
 RUN mkdir -p data && chown bun:bun data
 
-# run the app
+# Run the app using the bundled server file
 USER bun
 EXPOSE 3000/tcp
-ENTRYPOINT [ "bun", "run", "serve" ]
+ENTRYPOINT [ "bun", "run", "dist/server.js" ]
