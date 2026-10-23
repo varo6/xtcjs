@@ -98,7 +98,7 @@ For reTerminal Sticky, install CrossPoint Reader first. The generated XTC files 
 
 With **Split wide pages (right to left)** enabled, wide CBZ/CBR images are
 treated as double-page spreads. Each half uses the selected thirds/halves
-split, starting with the right page. The first image stays whole for the cover.
+split, starting with the right page. By default, the first image stays whole for the cover.
 Uncheck this option to keep panoramic artwork together, or choose **No split**
 to keep every source page whole. This is geometric splitting, not panel detection.
 
@@ -107,8 +107,18 @@ to keep every source page whole. This is geometric splitting, not panel detectio
 | Setting | Value |
 |---------|-------|
 | Dithering | Atkinson |
-| Contrast | Strong / Maximum |
+| Contrast | None (increase if needed) |
 | Orientation | Landscape |
+
+For scanned, single-column books, select **Overlapping thirds** and **Page Overview: None**.
+In **Advanced Settings**, turn off **Treat first page as cover** if the PDF starts
+with content. Each source page is then read top to bottom before the next page.
+Optionally enable **Avoid cutting text lines** to expand strip edges into nearby
+gaps between lines. This keeps the scanned images, with no OCR or text reflow;
+when no suitable gap is found, the original overlapping crop is kept.
+
+**Preview samples** shows selected images, not every strip in the converted file.
+Use the downloaded file to check the complete reading sequence.
 
 ### Wallpapers and covers
 
