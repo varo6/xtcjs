@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef, useEffectEvent } from 'react'
+import { InfoNote } from './InfoNote'
 
 interface ViewerProps {
   pages: string[]
+  totalPages?: number
   onClose: () => void
 }
 
@@ -29,7 +31,9 @@ function getThumbnailIndices(currentIndex: number, totalPages: number): number[]
   return Array.from(indices).sort((a, b) => a - b)
 }
 
-export function Viewer({ pages, onClose }: ViewerProps) {
+export function Viewer({ pages, totalPages, onClose }: ViewerProps) {
+  const isSamplePreview = totalPages !== undefined && pages.length < totalPages
+  const imageLabel = isSamplePreview ? 'Sample' : 'Page'
   const previousPagesRef = useRef(pages)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isRotated, setIsRotated] = useState(false)
@@ -89,7 +93,7 @@ export function Viewer({ pages, onClose }: ViewerProps) {
     <section className={`viewer-section${isRotated ? ' rotated' : ''}`}>
       <div className="viewer-header">
         <div className="section-header">
-          <h2>Preview</h2>
+          <h2>{isSamplePreview ? 'Preview samples' : 'Preview'}</h2>
           <span className="badge">{currentIndex + 1} / {pages.length}</span>
         </div>
         <div className="viewer-controls">
@@ -110,7 +114,7 @@ export function Viewer({ pages, onClose }: ViewerProps) {
             className="viewer-btn"
             onClick={() => goToPage(currentIndex - 1)}
             disabled={currentIndex === 0}
-            aria-label="Previous page"
+            aria-label={isSamplePreview ? 'Previous sample' : 'Previous page'}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M15 18l-6-6 6-6"/>
@@ -121,7 +125,7 @@ export function Viewer({ pages, onClose }: ViewerProps) {
             className="viewer-btn"
             onClick={() => goToPage(currentIndex + 1)}
             disabled={currentIndex === pages.length - 1}
-            aria-label="Next page"
+            aria-label={isSamplePreview ? 'Next sample' : 'Next page'}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M9 18l6-6-6-6"/>
@@ -139,11 +143,16 @@ export function Viewer({ pages, onClose }: ViewerProps) {
           </button>
         </div>
       </div>
+      {isSamplePreview && (
+        <InfoNote>
+          These samples may skip pages and are not the full reading order. The converted file has {totalPages} output pages.
+        </InfoNote>
+      )}
       <div className="viewer-container">
         <div className="viewer-page">
           <img
             src={pages[currentIndex]}
-            alt={`Page ${currentIndex + 1}`}
+            alt={`${imageLabel} ${currentIndex + 1}`}
             loading="eager"
             decoding="async"
           />
@@ -160,7 +169,7 @@ export function Viewer({ pages, onClose }: ViewerProps) {
             >
               <img
                 src={pages[i]}
-                alt={`Page ${i + 1}`}
+                alt={`${imageLabel} ${i + 1}`}
                 loading="lazy"
                 decoding="async"
               />

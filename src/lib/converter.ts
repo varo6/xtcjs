@@ -6,6 +6,7 @@ import unrarWasm from 'node-unrar-js/esm/js/unrar.wasm?url'
 import { applyDithering } from './processing/dithering'
 import { toGrayscale, applyContrast, calculateOverlapSegments, calculateFourWaySegments, calculateSpreadSegments, findContentBounds, shouldSplitPage } from './processing/image'
 import { rotateCanvas, extractAndRotate, extractRegion, resizeWithPadding, getTargetDimensions } from './processing/canvas'
+import { alignStripBoundaries } from './processing/text-strips'
 import { imageDataToXtg, imageDataToXth } from './processing/xtg'
 import { buildXtcFromXtgPages } from './xtc-format'
 import { extractPdfMetadata } from './metadata/pdf-outline'
@@ -834,7 +835,7 @@ async function convertPdfToXtc(
       background: 'rgb(255,255,255)'
     }).promise
 
-    const pages = processCanvasAsImage(canvas, i, pageOptions)
+    const pages = processCanvasAsImage(canvas, i, pageOptions, pageOptions.avoidTextCuts)
     encodedPages.push(...pages.map((page) => encodeCanvasPage(page, pageOptions.is2bit)))
     mappingCtx.addOriginalPage(i, pages.length)
 
@@ -869,7 +870,8 @@ async function convertPdfToXtc(
 function processCanvasAsImage(
   sourceCanvas: HTMLCanvasElement,
   pageNum: number,
-  options: ConversionOptions
+  options: ConversionOptions,
+  avoidTextCuts = false,
 ): ProcessedPage[] {
   const { width: targetWidth, height: targetHeight } = getOutputDimensions(options)
   const results: ProcessedPage[] = []
@@ -925,9 +927,19 @@ function processCanvasAsImage(
       ? calculateSpreadSegments(width, height, options.splitMode, targetWidth, targetHeight)
       : []
     if (options.splitMode === 'overlap' || spreadSegments.length > 0) {
-      const segments = spreadSegments.length > 0
+      let segments = spreadSegments.length > 0
         ? spreadSegments
         : calculateOverlapSegments(width, height, targetWidth, targetHeight)
+      if (avoidTextCuts && width < height && spreadSegments.length === 0) {
+        const analysis = document.createElement('canvas')
+        analysis.width = Math.min(256, width)
+        analysis.height = height
+        const analysisCtx = analysis.getContext('2d', { alpha: false, willReadFrequently: true })!
+        // Reduce horizontal resolution while retaining the original row coordinates.
+        analysisCtx.drawImage(canvas, 0, 0, analysis.width, analysis.height)
+        segments = alignStripBoundaries(analysisCtx.getImageData(0, 0, analysis.width, analysis.height), segments)
+        analysis.width = analysis.height = 0
+      }
       segments.forEach((seg, idx) => {
         const letter = String.fromCharCode(97 + idx)
         const pageCanvas = extractAndRotate(canvas, seg.x, seg.y, seg.w, seg.h, landscapeRotation)
