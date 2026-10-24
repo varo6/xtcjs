@@ -63,6 +63,18 @@ test('uses the selected panel aspect ratio for X3 spread crops', () => {
   }
 })
 
+test('uses the selected panel aspect ratio for eegoread A4 spread crops', () => {
+  const segments = calculateSpreadSegments(1643, 1200, 'overlap', 552, 768)
+  expect(segments).toHaveLength(6)
+  expect(segments[0].h).toBe(Math.floor(822 * 552 / 768))
+  for (const column of [segments.slice(0, 3), segments.slice(3)]) {
+    expect(column[0].y).toBe(0)
+    expect(column[2].y + column[2].h).toBe(1200)
+    expect(column[1].y).toBeLessThan(column[0].y + column[0].h)
+    expect(column[2].y).toBeLessThan(column[1].y + column[1].h)
+  }
+})
+
 test('does not crop outside unusually wide or one-pixel-high images', () => {
   for (const mode of ['overlap', 'split'] as const) {
     for (const [width, height] of [[8000, 1200], [3, 1]]) {

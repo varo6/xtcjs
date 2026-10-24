@@ -3,7 +3,8 @@
 const DEVICE_DIMENSIONS = {
   X4: { width: 480, height: 800 },
   X3: { width: 528, height: 792 },
-  Sticky: { width: 480, height: 800 }
+  Sticky: { width: 480, height: 800 },
+  A4: { width: 552, height: 768 }
 } as const;
 
 export type TargetDevice = keyof typeof DEVICE_DIMENSIONS;

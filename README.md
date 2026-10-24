@@ -31,6 +31,7 @@ No installation or account required.
 | XTEink X4 / X4 Pro | 480×800 | Select X4 / Pro |
 | XTEink X3 | 528×792 | Select X3 |
 | Seeed Studio reTerminal Sticky | 480×800 | Requires CrossPoint Reader firmware |
+| eegoread A4 | 552×768 | Select eegoread A4 |
 
 Sticky's preset uses the page canvas expected by CrossPoint Reader. Generated XTC files are not compatible with the original Seeed firmware.
 

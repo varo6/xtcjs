@@ -36,6 +36,12 @@ export const TARGET_DEVICES: TargetDeviceOption[] = [
     label: 'Sticky',
     size: '480 × 800',
     title: 'Seeed Studio reTerminal Sticky with CrossPoint Reader (480 x 800)'
+  },
+  {
+    id: 'A4',
+    label: 'eegoread A4',
+    size: '552 × 768',
+    title: 'eegoread A4 (552 x 768)'
   }
 ]
 
