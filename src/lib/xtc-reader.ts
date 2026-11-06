@@ -163,7 +163,7 @@ export async function parseXtcFile(
 /**
  * Get page count from XTC file without parsing all data.
  */
-async function getXtcPageCount(buffer: ArrayBuffer): Promise<number> {
+export async function getXtcPageCount(buffer: ArrayBuffer): Promise<number> {
   const view = new DataView(buffer)
   const header = parseXtcHeader(view)
   return header.pageCount
@@ -172,7 +172,7 @@ async function getXtcPageCount(buffer: ArrayBuffer): Promise<number> {
 /**
  * Decode XTG or XTH page data to canvas.
  */
-function decodeXtcPageToCanvas(pageBuffer: ArrayBuffer): HTMLCanvasElement {
+export function decodeXtcPageToCanvas(pageBuffer: ArrayBuffer): HTMLCanvasElement {
   const view = new DataView(pageBuffer)
   const uint8 = new Uint8Array(pageBuffer)
 
@@ -225,9 +225,8 @@ function decodeXtcPageToCanvas(pageBuffer: ArrayBuffer): HTMLCanvasElement {
       }
     }
   } else {
-    const pixelDataSize = view.getUint32(10, true)
-    const pixelData = new Uint8Array(pageBuffer, headerSize, pixelDataSize)
     const rowBytes = Math.ceil(width / 8)
+    const pixelData = new Uint8Array(pageBuffer, headerSize, rowBytes * height)
 
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {

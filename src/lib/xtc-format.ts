@@ -25,8 +25,9 @@ const TOC_HEADER_SIZE = 16;
 const TOC_ENTRY_SIZE = 96;
 const TOC_TITLE_SIZE = 80;
 
-// Flags for metadata presence: 0x01000100 with extra byte at 0x0C = 0x01
-const FLAG_HAS_METADATA_LOW = 0x01000100;
+// Metadata and chapter presence are separate flags in the native header.
+const FLAG_HAS_METADATA_LOW = 0x00000100;
+const FLAG_HAS_CHAPTERS_LOW = 0x01000000;
 const FLAG_HAS_METADATA_HIGH = 0x00000001;
 
 function getXtgDimensions(xtgBlob: ArrayBuffer): { width: number; height: number } {
@@ -64,11 +65,18 @@ export async function buildXtcFromXtgPages(
 
   const is2bit = options.is2bit || false;
   const pageCount = xtgBlobs.length;
+  if (pageCount < 1 || pageCount > 65535) {
+    throw new Error('XTC/XTCH files must contain between 1 and 65535 pages');
+  }
+  if ((options.metadata?.toc.length ?? 0) > 65535) {
+    throw new Error('XTC/XTCH files support at most 65535 chapters');
+  }
   const hasMetadata = options.metadata && (
     options.metadata.title ||
     options.metadata.author ||
     options.metadata.toc.length > 0
   );
+  const hasChapters = (options.metadata?.toc.length ?? 0) > 0;
 
   // Calculate metadata section size
   let metadataSize = 0;
@@ -81,7 +89,9 @@ export async function buildXtcFromXtgPages(
       metadataSize += options.metadata!.toc.length * TOC_ENTRY_SIZE;
     }
     // TOC entries start after header + title + author + toc header
-    tocEntriesOffset = HEADER_WITH_METADATA_SIZE + TITLE_SIZE + AUTHOR_SIZE + TOC_HEADER_SIZE;
+    if (hasChapters) {
+      tocEntriesOffset = HEADER_WITH_METADATA_SIZE + TITLE_SIZE + AUTHOR_SIZE + TOC_HEADER_SIZE;
+    }
   }
 
   // Calculate offsets
@@ -92,6 +102,18 @@ export async function buildXtcFromXtgPages(
 
   let totalSize = dataOffset;
   for (const blob of xtgBlobs) {
+    const bytes = new Uint8Array(blob);
+    if (blob.byteLength < 22 || bytes[0] !== 0x58 || bytes[1] !== 0x54 ||
+        bytes[2] !== (is2bit ? 0x48 : 0x47) || bytes[3] !== 0) {
+      throw new Error('Page format does not match the XTC/XTCH output bit depth');
+    }
+    const pageView = new DataView(blob);
+    const width = pageView.getUint16(4, true);
+    const height = pageView.getUint16(6, true);
+    const expectedSize = is2bit ? Math.ceil(height / 8) * width * 2 : Math.ceil(width / 8) * height;
+    if (!width || !height || blob.byteLength < 22 + expectedSize) {
+      throw new Error('Incomplete page data');
+    }
     totalSize += blob.byteLength;
   }
 
@@ -110,7 +132,7 @@ export async function buildXtcFromXtgPages(
 
   // Flags
   if (hasMetadata) {
-    view.setUint32(8, FLAG_HAS_METADATA_LOW, true);
+    view.setUint32(8, FLAG_HAS_METADATA_LOW | (hasChapters ? FLAG_HAS_CHAPTERS_LOW : 0), true);
     view.setUint32(12, FLAG_HAS_METADATA_HIGH, true);
   } else {
     view.setUint32(8, 0, true);
@@ -238,7 +260,8 @@ function writeTocEntries(
   for (const entry of toc) {
     // Title (80 bytes, null-terminated)
     const titleBytes = encoder.encode(entry.title);
-    const titleLen = Math.min(titleBytes.length, TOC_TITLE_SIZE - 1);
+    let titleLen = Math.min(titleBytes.length, TOC_TITLE_SIZE - 1);
+    while (titleLen > 0 && (titleBytes[titleLen] & 0xc0) === 0x80) titleLen--;
     uint8.set(titleBytes.subarray(0, titleLen), entryOffset);
 
     // Start page (2 bytes, 1-indexed)

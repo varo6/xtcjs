@@ -83,6 +83,18 @@ The blog has its own reading layout, article cards, and responsive banners. A sm
 
 For reTerminal Sticky, install CrossPoint Reader first. The generated XTC files are not compatible with the original Seeed firmware.
 
+### Merge and split reader files
+
+Merge / Split accepts **XTC (1-bit)** and **XTCH (2-bit)** files, including drag
+and drop. Reader output keeps the original bit depth, page dimensions and encoded
+page images. Merge XTC and XTCH separately; mixed bit depths are rejected.
+
+When merging reader files, optionally enable **Create a chapter for each file**.
+The listed file order, file names and page counts define the chapter titles and
+boundaries. This replaces existing chapter lists; leave it off to preserve them.
+Splitting keeps the chapters that overlap each part and renumbers their pages.
+CBZ export preserves the decoded grayscale images but does not carry reader chapters.
+
 ---
 
 ## Suggested settings

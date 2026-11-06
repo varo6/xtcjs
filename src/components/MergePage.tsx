@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { Viewer } from './Viewer'
 import { LinkedText } from './LinkedText'
+import { InfoNote } from './InfoNote'
 import { formatSize } from '../utils/format'
 import { normalizeUserErrorMessage } from '../lib/errors'
 import { setPendingFiles, arrayBufferToFile } from '../lib/file-transfer'
@@ -54,16 +55,22 @@ export function MergePage() {
   const [partsCount, setPartsCount] = useState(2)
   const [totalPages, setTotalPages] = useState<number | null>(null)
 
-  // Output format: keep same type for CBZ/PDF, allow choice for XTC
+  // Reader output preserves the input bit depth; CBZ/PDF keep their type.
   const [xtcOutputFormat, setXtcOutputFormat] = useState<OutputFormat>('xtc')
+  const [createChapters, setCreateChapters] = useState(false)
+  const isReaderInput = detectedType === 'xtc' || detectedType === 'xtch'
   
   // Determine actual output format based on input type
   const actualOutputFormat: OutputFormat = useMemo(() => {
     if (!detectedType) return 'cbz'
-    if (detectedType === 'xtc') return xtcOutputFormat
+    if (detectedType === 'xtc' || detectedType === 'xtch') return xtcOutputFormat
     if (detectedType === 'pdf') return 'pdf'
     return 'cbz' // CBZ input stays as CBZ
   }, [detectedType, xtcOutputFormat])
+  const outputFormatLabel = actualOutputFormat === 'xtc' && detectedType === 'xtch'
+    ? 'XTCH'
+    : actualOutputFormat.toUpperCase()
+  const canCreateChapters = mode === 'merge' && isReaderInput && actualOutputFormat === 'xtc'
 
   // Calculate expected output count for split
   const expectedOutputCount = useMemo(() => {
@@ -89,7 +96,7 @@ export function MergePage() {
 
       const type = detectFileType(file)
       if (type === 'unknown') {
-        setTypeError('Unsupported file type. Use CBZ, PDF, or XTC files.')
+        setTypeError('Unsupported file type. Use CBZ, PDF, XTC, or XTCH files.')
         return
       }
 
@@ -124,12 +131,11 @@ export function MergePage() {
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
-    const droppedFiles = Array.from(e.dataTransfer.files).filter(f => {
-      const ext = f.name.toLowerCase().split('.').pop()
-      return ['cbz', 'pdf', 'xtc'].includes(ext || '')
-    })
+    const droppedFiles = Array.from(e.dataTransfer.files).filter(f => detectFileType(f) !== 'unknown')
     if (droppedFiles.length > 0) {
       handleFiles(droppedFiles)
+    } else {
+      setTypeError('Unsupported file type. Use CBZ, PDF, XTC, or XTCH files.')
     }
   }, [handleFiles])
 
@@ -177,7 +183,7 @@ export function MergePage() {
           setProgressText(p.file)
           setProgress((p.fileIndex + p.pageProgress) / p.totalFiles)
           if (p.previewUrl) setPreviewUrl(p.previewUrl)
-        })
+        }, canCreateChapters && createChapters)
 
         setResults([{ ...result, selected: true }])
       } else {
@@ -223,7 +229,7 @@ export function MergePage() {
       setIsProcessing(false)
       setPreviewUrl(null)
     }
-  }, [files, mode, actualOutputFormat, splitMethod, rangesInput, partsCount, totalPages])
+  }, [files, mode, actualOutputFormat, splitMethod, rangesInput, partsCount, totalPages, canCreateChapters, createChapters])
 
   const handleDownload = useCallback((result: MergePageResult) => {
     if (!result.data) return
@@ -320,7 +326,7 @@ export function MergePage() {
                 {mode === 'merge' ? 'Drop files to merge' : 'Drop a file to split'}
               </span>
               <span className="dropzone-secondary">
-                CBZ, PDF, or XTC {mode === 'merge' ? '(same type only)' : ''}
+                CBZ, PDF, XTC, or XTCH {mode === 'merge' ? '(same type only)' : ''}
               </span>
             </div>
           </div>
@@ -328,7 +334,7 @@ export function MergePage() {
         <input
           id="merge-file-input"
           type="file"
-          accept=".cbz,.CBZ,.pdf,.PDF,.xtc,.XTC"
+          accept=".cbz,.CBZ,.pdf,.PDF,.xtc,.XTC,.xtch,.XTCH"
           multiple={mode === 'merge'}
           aria-label={mode === 'merge' ? 'Choose files to merge' : 'Choose a file to split'}
           hidden
@@ -386,8 +392,8 @@ export function MergePage() {
             <h2>Options</h2>
           </div>
 
-          {/* Output format - only for XTC input */}
-          {detectedType === 'xtc' && (
+          {/* Output format - only for native reader input */}
+          {isReaderInput && (
             <div className="option">
               <label htmlFor="outputFormat">Output Format</label>
               <select
@@ -395,9 +401,30 @@ export function MergePage() {
                 value={xtcOutputFormat}
                 onChange={(e) => setXtcOutputFormat(e.target.value as OutputFormat)}
               >
-                <option value="xtc">XTC (E-Reader)</option>
+                <option value="xtc">
+                  {detectedType === 'xtch' ? 'XTCH (2-bit, keep format)' : 'XTC (1-bit, keep format)'}
+                </option>
                 <option value="cbz">CBZ (Archive)</option>
               </select>
+            </div>
+          )}
+
+          {canCreateChapters && (
+            <div className="option option-checkbox">
+              <label htmlFor="createChapters" className="checkbox-label">
+                <input
+                  type="checkbox"
+                  id="createChapters"
+                  checked={createChapters}
+                  aria-describedby="create-chapters-note"
+                  onChange={(e) => setCreateChapters(e.target.checked)}
+                />
+                <span>Create a chapter for each file</span>
+              </label>
+              <InfoNote id="create-chapters-note">
+                Uses file names as chapter titles and page counts to set chapter boundaries.
+                Replaces existing chapter lists.
+              </InfoNote>
             </div>
           )}
 
@@ -472,7 +499,7 @@ export function MergePage() {
               {/* Output count preview */}
               {expectedOutputCount > 0 && (
                 <div className="output-preview">
-                  Will create <strong>{expectedOutputCount}</strong> {actualOutputFormat.toUpperCase()} file{expectedOutputCount !== 1 ? 's' : ''}
+                  Will create <strong>{expectedOutputCount}</strong> {outputFormatLabel} file{expectedOutputCount !== 1 ? 's' : ''}
                 </div>
               )}
             </>
@@ -481,7 +508,7 @@ export function MergePage() {
           {/* Merge output preview */}
           {mode === 'merge' && files.length >= 2 && (
             <div className="output-preview">
-              Will create <strong>1</strong> {actualOutputFormat.toUpperCase()} file
+              Will create <strong>1</strong> {outputFormatLabel} file
             </div>
           )}
         </aside>
