@@ -83,8 +83,8 @@ export function extractRegion(
 export function resizeWithPadding(
   canvas: HTMLCanvasElement,
   padColor = 255,
-  targetWidth = TARGET_WIDTH,
-  targetHeight = TARGET_HEIGHT
+  targetWidth: number = TARGET_WIDTH,
+  targetHeight: number = TARGET_HEIGHT
 ): HTMLCanvasElement {
   const result = document.createElement('canvas');
   result.width = targetWidth;
