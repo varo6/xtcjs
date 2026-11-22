@@ -1,6 +1,3 @@
-// Canvas primitives that work on OffscreenCanvas (worker, or main thread when
-// available) and HTMLCanvasElement (main thread without OffscreenCanvas).
-
 import { DEVICES } from '../devices'
 
 export const TARGET_WIDTH = DEVICES.X4.width
@@ -18,7 +15,6 @@ export function createCanvas(width: number, height: number): PageCanvas {
   return canvas
 }
 
-/** Every page canvas is opaque; the image filters take the DOM context type. */
 export function context2d(canvas: PageCanvas): CanvasRenderingContext2D {
   return canvas.getContext('2d', { alpha: false }) as CanvasRenderingContext2D
 }

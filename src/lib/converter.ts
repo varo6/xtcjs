@@ -1,6 +1,3 @@
-// Browser conversion of CBZ/CBR/PDF/image/video files to XTC. Every format
-// goes through the same loop; conversion/sources.ts holds what differs.
-
 import { buildXtcFromXtgPages } from './xtc-format'
 import { PageMappingContext, adjustTocForMapping } from './page-mapping'
 import { ConvertWorkerPool, isWorkerPipelineSupported } from './conversion/worker-pool'
@@ -74,7 +71,6 @@ export async function convertToXtc(
   }
 }
 
-/** The only place where options differ between the pages of one book. */
 function resolvePageOptions(options: ConversionOptions, forceNoSplit: boolean, isCover: boolean): ConversionOptions {
   let resolved = forceNoSplit ? { ...options, splitMode: 'nosplit' as const } : options
   if (isCover) {

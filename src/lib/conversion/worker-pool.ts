@@ -1,7 +1,6 @@
 import type { ConvertedPage } from './render-page'
 import type { ConversionOptions } from './types'
 
-/** An encoded image the worker decodes, or a page already rendered on the main thread. */
 export type WorkerPageImage = Blob | ImageBitmap
 
 export interface PageJob {

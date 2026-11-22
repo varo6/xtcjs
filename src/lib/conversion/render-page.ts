@@ -9,13 +9,11 @@ const PREVIEW_WIDTH = 240
 const PREVIEW_HEIGHT = 400
 const PREVIEW_JPEG_QUALITY = 0.55
 
-/** ImageBitmap in the worker; a decoded image or a rendered canvas on the main thread. */
 export type DecodedPage = ImageBitmap | HTMLImageElement | PageCanvas
 
 export interface ConvertedPage {
   name: string
   xtg: ArrayBuffer
-  /** JPEG of the first output page, present only when a preview was requested. */
   preview?: Blob
 }
 
@@ -24,7 +22,6 @@ interface RenderedPage {
   canvas: PageCanvas
 }
 
-/** The page pipeline. The worker and the main-thread fallback both run exactly this. */
 export async function convertPage(
   source: DecodedPage,
   pageNum: number,
@@ -161,7 +158,6 @@ function applyImageMode(
     return result
   }
 
-  // cover: fill the frame and crop the overflow
   const scale = Math.max(targetWidth / source.width, targetHeight / source.height)
   const drawWidth = Math.round(source.width * scale)
   const drawHeight = Math.round(source.height * scale)

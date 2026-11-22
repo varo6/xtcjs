@@ -1,7 +1,3 @@
-// What each input format contributes to a conversion: its pages, how to load
-// one, and its metadata. Everything else (cover handling, per-page options,
-// scheduling, previews) is the same for every format and lives in converter.ts.
-
 import JSZip from 'jszip'
 import { createExtractorFromData } from 'node-unrar-js'
 import unrarWasm from 'node-unrar-js/esm/js/unrar.wasm?url'
@@ -13,7 +9,6 @@ import type { ConversionOptions } from './types'
 
 export type FileType = 'cbz' | 'cbr' | 'pdf' | 'image' | 'video'
 
-/** An encoded image file, or a page the main thread rendered (PDF page, video frame). */
 export type SourceImage = Blob | HTMLCanvasElement
 
 export interface SourcePage {
@@ -27,9 +22,7 @@ export interface SourcePage {
 export interface Book {
   pages: SourcePage[]
   metadata: BookMetadata
-  /** The format has a cover page, so `firstPageIsCover` applies to it. */
   hasCover: boolean
-  /** Every page is converted whole, whatever `splitMode` says. */
   forceNoSplit: boolean
   close?: () => void
 }
@@ -69,19 +62,22 @@ function archiveBook(
     throw new Error(`No images found in ${format}`)
   }
 
-  let metadata: BookMetadata = { toc: [] }
-  if (comicInfoXml) {
-    try {
-      metadata = parseComicInfo(comicInfoXml)
-    } catch {
-      // Continue conversion without metadata.
-    }
-  }
+  const metadata = comicInfoXml ? parseMetadataOrNone(() => parseComicInfo(comicInfoXml)) : NO_METADATA()
 
   const pages = [...images]
     .sort((a, b) => a.path.localeCompare(b.path))
     .map((image, index) => ({ ...image, originalPage: index + 1 }))
   return { pages, metadata, hasCover: true, forceNoSplit: false }
+}
+
+const NO_METADATA = (): BookMetadata => ({ toc: [] })
+
+function parseMetadataOrNone(parse: () => BookMetadata): BookMetadata {
+  try {
+    return parse()
+  } catch {
+    return NO_METADATA()
+  }
 }
 
 async function openCbz(file: File): Promise<Book> {
@@ -125,12 +121,7 @@ async function openCbr(file: File): Promise<Book> {
 async function openPdf(file: File): Promise<Book> {
   const pdf = await loadPdfDocument(await file.arrayBuffer())
 
-  let metadata: BookMetadata = { toc: [] }
-  try {
-    metadata = await extractPdfMetadata(pdf)
-  } catch {
-    // Continue conversion without metadata.
-  }
+  const metadata = await extractPdfMetadata(pdf).catch(NO_METADATA)
 
   const render = async (pageNumber: number) => {
     const page = await pdf.getPage(pageNumber)
@@ -149,7 +140,7 @@ async function openPdf(file: File): Promise<Book> {
 async function openImage(file: File): Promise<Book> {
   return {
     pages: [{ originalPage: 1, load: async () => file }],
-    metadata: { toc: [] },
+    metadata: NO_METADATA(),
     hasCover: false,
     forceNoSplit: true,
   }
@@ -200,7 +191,7 @@ async function openVideo(file: File, { videoFps }: SourceOptions): Promise<Book>
     },
   }))
 
-  return { pages, metadata: { toc: [] }, hasCover: false, forceNoSplit: true, close }
+  return { pages, metadata: NO_METADATA(), hasCover: false, forceNoSplit: true, close }
 }
 
 async function loadVideoDuration(video: HTMLVideoElement): Promise<number> {
