@@ -1,7 +1,8 @@
 import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { ConversionOptions } from '../lib/converter'
-import { normalizeSplitModeForOrientation, Options, TARGET_DEVICES } from './Options'
+import { normalizeSplitModeForOrientation, Options } from './Options'
+import { DEVICE_IDS, DEVICES } from '../lib/devices'
 
 function deviceSelectTag(markup: string) {
   const tag = markup.match(/<select[^>]*id="targetDevice"[^>]*>/)
@@ -73,10 +74,9 @@ test('offers Sticky as a target device', () => {
 test('labels every target device with its panel size', () => {
   const markup = renderPdfOptions('portrait')
 
-  expect(TARGET_DEVICES.map(device => device.id)).toEqual(['X4', 'X3', 'Sticky'])
-  for (const device of TARGET_DEVICES) {
-    expect(markup).toContain(`[${device.label}]`)
-    expect(markup).toContain(device.size)
+  expect(DEVICE_IDS).toEqual(['X4', 'X3', 'Sticky'])
+  for (const id of DEVICE_IDS) {
+    expect(markup).toContain(`[${DEVICES[id].label}]`)
   }
   expect(markup).toContain('480 × 800')
   expect(markup).toContain('528 × 792')
@@ -86,7 +86,7 @@ test('renders the target devices in one labelled dropdown', () => {
   const markup = renderPdfOptions('portrait')
   const select = deviceSelectMarkup(markup)
 
-  expect(select.match(/<option/g)?.length).toBe(TARGET_DEVICES.length)
+  expect(select.match(/<option/g)?.length).toBe(DEVICE_IDS.length)
   expect(deviceSelectTag(markup)).toContain('aria-label="Target device"')
 })
 
@@ -110,8 +110,10 @@ test('warns that the Sticky target requires CrossPoint Reader', () => {
 test('links the Sticky firmware notice to the dropdown for screen readers', () => {
   const stickyMarkup = renderPdfOptions('portrait', 'Sticky')
 
-  expect(deviceSelectTag(stickyMarkup)).toContain('aria-describedby="device-notice-sticky"')
-  expect(stickyMarkup).toContain('id="device-notice-sticky"')
+  const describedBy = deviceSelectTag(stickyMarkup).match(/aria-describedby="([^"]+)"/)?.[1]
+
+  expect(describedBy).toBeDefined()
+  expect(stickyMarkup).toMatch(new RegExp(`id="${describedBy}"[^>]*>[\\s\\S]*Requires CrossPoint Reader firmware`))
   expect(stickyMarkup).toContain('aria-live="polite"')
 })
 
@@ -121,6 +123,6 @@ test('keeps the live region mounted but drops the notice reference when unselect
   // The live region has to stay in the DOM for the notice to be announced when
   // Sticky is picked, but aria-describedby must not point at a missing element.
   expect(x4Markup).toContain('aria-live="polite"')
-  expect(x4Markup).not.toContain('id="device-notice-sticky"')
+  expect(x4Markup).not.toContain('Requires CrossPoint Reader firmware')
   expect(x4Markup).not.toContain('aria-describedby')
 })
