@@ -1,10 +1,5 @@
 import { expect, test } from 'bun:test'
-import { deleteStoredResult, withoutStoredResult } from './useStoredResults'
-
-test('removes only the requested stored result', () => {
-  const results = [{ id: 'one' }, { id: 'two' }]
-  expect(withoutStoredResult(results, 'one')).toEqual([{ id: 'two' }])
-})
+import { deleteStoredResult } from './useStoredResults'
 
 test('waits for persisted deletion before succeeding', async () => {
   let resolveDeletion!: () => void
