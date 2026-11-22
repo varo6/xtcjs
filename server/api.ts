@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import type { Database } from 'bun:sqlite'
 
 const api = new Hono()
 
@@ -14,7 +15,7 @@ const FLUSH_INTERVAL_MS = 60 * 60 * 1000 // 1 hour default
 const isBun = typeof globalThis.Bun !== 'undefined'
 
 // Database instance (only available in Bun)
-let db: any = null
+let db: Database | null = null
 
 // In-memory counters (flushed periodically when db available)
 const pending = {
