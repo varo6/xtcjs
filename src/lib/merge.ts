@@ -2,13 +2,15 @@
 
 import JSZip from 'jszip'
 import { PDFDocument } from 'pdf-lib'
-import { buildXtc } from './xtc-format'
-import { extractXtcPages, extractXtcRawPages, parseXtcFile } from './xtc-reader'
+import { buildXtc, buildXtcFromBuffers } from './xtc-format'
+import { decodeXtcPageToCanvas, parseXtcFile } from './xtc-reader'
+import { sliceChapters } from './metadata/chapters'
+import type { BookMetadata, TocEntry } from './metadata/types'
 import { loadPdfDocument } from './pdfjs'
 import { TARGET_WIDTH, TARGET_HEIGHT } from './processing/canvas'
 import { mapWithConcurrency } from './concurrency'
 
-export type FileType = 'cbz' | 'cbr' | 'pdf' | 'xtc' | 'unknown'
+export type FileType = 'cbz' | 'pdf' | 'xtc' | 'xtch' | 'unknown'
 export type OutputFormat = 'xtc' | 'cbz' | 'pdf'
 
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'])
@@ -37,12 +39,12 @@ export function detectFileType(file: File): FileType {
   switch (ext) {
     case 'cbz':
       return 'cbz'
-    case 'cbr':
-      return 'cbr'
     case 'pdf':
       return 'pdf'
     case 'xtc':
       return 'xtc'
+    case 'xtch':
+      return 'xtch'
     default:
       return 'unknown'
   }
@@ -77,7 +79,8 @@ export function validateSameType(files: File[]): { valid: boolean; type: FileTyp
 export async function mergeFiles(
   files: File[],
   outputFormat: OutputFormat,
-  onProgress: (progress: MergeProgress) => void
+  onProgress: (progress: MergeProgress) => void,
+  createChapters = false,
 ): Promise<MergeResult> {
   const validation = validateSameType(files)
   if (!validation.valid) {
@@ -90,7 +93,8 @@ export async function mergeFiles(
     case 'pdf':
       return mergePdfFiles(files, outputFormat, onProgress)
     case 'xtc':
-      return mergeXtcFiles(files, outputFormat, onProgress)
+    case 'xtch':
+      return mergeXtcFiles(files, outputFormat, onProgress, createChapters)
     default:
       throw new Error('Unsupported file type')
   }
@@ -323,11 +327,15 @@ async function mergePdfFiles(
 async function mergeXtcFiles(
   files: File[],
   outputFormat: OutputFormat,
-  onProgress: (progress: MergeProgress) => void
+  onProgress: (progress: MergeProgress) => void,
+  createChapters: boolean,
 ): Promise<MergeResult> {
   if (outputFormat === 'xtc') {
-    // Fast path: concatenate raw XTG data without decoding
+    // Keep encoded page bytes, including XTCH bitplanes, unchanged.
     const allXtgData: ArrayBuffer[] = []
+    const chapters: TocEntry[] = []
+    let metadata: BookMetadata = { toc: [] }
+    let is2bit = false
 
     for (let fileIdx = 0; fileIdx < files.length; fileIdx++) {
       const file = files[fileIdx]
@@ -339,8 +347,23 @@ async function mergeXtcFiles(
       })
 
       const buffer = await file.arrayBuffer()
-      const rawPages = await extractXtcRawPages(buffer)
-      allXtgData.push(...rawPages)
+      const parsed = await parseXtcFile(buffer)
+      if (fileIdx === 0) {
+        is2bit = parsed.header.is2bit
+        metadata = parsed.metadata ?? { toc: [] }
+      } else if (parsed.header.is2bit !== is2bit) {
+        throw new Error('XTC and XTCH files must have the same bit depth to merge. Convert them to the same format first.')
+      }
+      if (parsed.pageData.length === 0) throw new Error(`${file.name} contains no pages`)
+      const offset = allXtgData.length
+      const fileChapters = createChapters
+        ? [{ title: file.name.replace(/\.xtch?$/i, '').trim() || `Chapter ${fileIdx + 1}`,
+            startPage: 1, endPage: parsed.pageData.length }]
+        : sliceChapters(parsed.metadata?.toc ?? [], 1, parsed.pageData.length)
+      chapters.push(...fileChapters.map(chapter => ({
+        ...chapter, startPage: chapter.startPage + offset, endPage: chapter.endPage + offset,
+      })))
+      allXtgData.push(...parsed.pageData)
 
       onProgress({
         file: file.name,
@@ -350,16 +373,16 @@ async function mergeXtcFiles(
       })
     }
 
-    const data = buildXtcFromRawPages(allXtgData)
+    const data = await buildXtcFromBuffers(allXtgData, { is2bit, metadata: { ...metadata, toc: chapters } })
     return {
-      name: 'merged.xtc',
+      name: is2bit ? 'merged.xtch' : 'merged.xtc',
       data,
       size: data.byteLength,
       pageCount: allXtgData.length,
     }
   } else {
     // Output CBZ: need to decode XTC pages to images
-    const allCanvases: HTMLCanvasElement[] = []
+    const images: { name: string; blob: Blob }[] = []
 
     for (let fileIdx = 0; fileIdx < files.length; fileIdx++) {
       const file = files[fileIdx]
@@ -371,8 +394,15 @@ async function mergeXtcFiles(
       })
 
       const buffer = await file.arrayBuffer()
-      const canvases = await extractXtcPages(buffer)
-      allCanvases.push(...canvases)
+      const parsed = await parseXtcFile(buffer)
+      for (const page of parsed.pageData) {
+        const canvas = decodeXtcPageToCanvas(page)
+        images.push({
+          name: `${String(images.length + 1).padStart(5, '0')}.png`,
+          blob: dataURLtoBlob(canvas.toDataURL('image/png')),
+        })
+        canvas.width = canvas.height = 0
+      }
 
       onProgress({
         file: file.name,
@@ -382,17 +412,12 @@ async function mergeXtcFiles(
       })
     }
 
-    const images = allCanvases.map((canvas, i) => ({
-      name: `${String(i + 1).padStart(5, '0')}.png`,
-      blob: dataURLtoBlob(canvas.toDataURL('image/png')),
-    }))
-
     const data = await buildCbz(images)
     return {
       name: 'merged.cbz',
       data,
       size: data.byteLength,
-      pageCount: allCanvases.length,
+      pageCount: images.length,
     }
   }
 }
@@ -437,74 +462,6 @@ export async function splitPdf(
       pageCount: copiedPages.length,
     }
   }, 3)
-}
-
-/**
- * Build XTC from raw XTG page data (fast path for XTC merge)
- */
-function buildXtcFromRawPages(xtgBlobs: ArrayBuffer[]): ArrayBuffer {
-  const pageCount = xtgBlobs.length
-  const headerSize = 48
-  const indexEntrySize = 16
-  const indexOffset = headerSize
-  const dataOffset = indexOffset + pageCount * indexEntrySize
-
-  let totalSize = dataOffset
-  for (const blob of xtgBlobs) {
-    totalSize += blob.byteLength
-  }
-
-  const buffer = new ArrayBuffer(totalSize)
-  const view = new DataView(buffer)
-  const uint8 = new Uint8Array(buffer)
-
-  // Header: XTC magic number
-  uint8[0] = 0x58; uint8[1] = 0x54; uint8[2] = 0x43; uint8[3] = 0x00
-  view.setUint16(4, 1, true) // version
-  view.setUint16(6, pageCount, true)
-  view.setUint8(8, 0)
-  view.setUint8(9, 0)
-  view.setUint8(10, 0)
-  view.setUint8(11, 0)
-  view.setUint32(12, 0, true)
-
-  setBigUint64(view, 16, 0n)
-  setBigUint64(view, 24, BigInt(indexOffset))
-  setBigUint64(view, 32, BigInt(dataOffset))
-  setBigUint64(view, 40, 0n)
-
-  // Write index entries
-  let relOffset = dataOffset
-  for (let i = 0; i < pageCount; i++) {
-    const blob = xtgBlobs[i]
-    const entryOffset = indexOffset + i * indexEntrySize
-
-    setBigUint64(view, entryOffset, BigInt(relOffset))
-    view.setUint32(entryOffset + 8, blob.byteLength, true)
-    view.setUint16(entryOffset + 12, TARGET_WIDTH, true)
-    view.setUint16(entryOffset + 14, TARGET_HEIGHT, true)
-
-    relOffset += blob.byteLength
-  }
-
-  // Write page data
-  let writeOffset = dataOffset
-  for (const blob of xtgBlobs) {
-    uint8.set(new Uint8Array(blob), writeOffset)
-    writeOffset += blob.byteLength
-  }
-
-  return buffer
-}
-
-/**
- * Helper to set 64-bit unsigned integer (little-endian)
- */
-function setBigUint64(view: DataView, offset: number, value: bigint): void {
-  const low = Number(value & 0xFFFFFFFFn)
-  const high = Number(value >> 32n)
-  view.setUint32(offset, low, true)
-  view.setUint32(offset + 4, high, true)
 }
 
 /**
