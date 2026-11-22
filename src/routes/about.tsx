@@ -19,7 +19,7 @@ function AboutPage() {
       <section className="content-section">
         <h2>Supported readers</h2>
         <p>
-          Choose XTEink X4 or X4 Pro, XTEink X3, or reTerminal Sticky in the device selector.
+          Choose XTEink X4 or X4 Pro, XTEink X3, reTerminal Sticky, or eegoread A4 in the device selector.
           Sticky requires CrossPoint Reader firmware. The generated XTC files are not compatible
           with the original Seeed firmware.
         </p>
@@ -52,7 +52,7 @@ function AboutPage() {
         <h2>About the XTC Format</h2>
         <p>
           XTC stores 1-bit black and white page images for compatible e-ink readers.
-          XTC.js sizes each page for the reader you select: 480×800 for X4 and Sticky, or 528×792 for X3.
+          XTC.js sizes each page for the reader you select: 480×800 for X4 and Sticky, 528×792 for X3, or 552×768 for eegoread A4.
         </p>
       </section>
 

@@ -70,16 +70,21 @@ test('offers Sticky as a target device', () => {
   expect(renderPdfOptions('portrait')).toContain('[Sticky]')
 })
 
+test('offers eegoread A4 as a target device', () => {
+  expect(renderPdfOptions('portrait')).toContain('[eegoread A4]')
+})
+
 test('labels every target device with its panel size', () => {
   const markup = renderPdfOptions('portrait')
 
-  expect(TARGET_DEVICES.map(device => device.id)).toEqual(['X4', 'X3', 'Sticky'])
+  expect(TARGET_DEVICES.map(device => device.id)).toEqual(['X4', 'X3', 'Sticky', 'A4'])
   for (const device of TARGET_DEVICES) {
     expect(markup).toContain(`[${device.label}]`)
     expect(markup).toContain(device.size)
   }
   expect(markup).toContain('480 × 800')
   expect(markup).toContain('528 × 792')
+  expect(markup).toContain('552 × 768')
 })
 
 test('renders the target devices in one labelled dropdown', () => {
@@ -90,14 +95,16 @@ test('renders the target devices in one labelled dropdown', () => {
   expect(deviceSelectTag(markup)).toContain('aria-label="Target device"')
 })
 
-test('selects X4 by default and allows X3 or Sticky', () => {
+test('selects X4 by default and allows X3, Sticky, or A4', () => {
   const x4Markup = renderPdfOptions('portrait')
   const x3Markup = renderPdfOptions('portrait', 'X3')
   const stickyMarkup = renderPdfOptions('portrait', 'Sticky')
+  const a4Markup = renderPdfOptions('portrait', 'A4')
 
   expect(x4Markup).toContain('<option value="X4" selected="">')
   expect(x3Markup).toContain('<option value="X3" selected="">')
   expect(stickyMarkup).toContain('<option value="Sticky" selected="">')
+  expect(a4Markup).toContain('<option value="A4" selected="">')
 })
 
 test('warns that the Sticky target requires CrossPoint Reader', () => {

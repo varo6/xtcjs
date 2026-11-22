@@ -2,7 +2,7 @@ export type SplitMode = 'overlap' | 'split' | 'fourway' | 'nosplit'
 export type PageOverviewMode = 'none' | 'portrait' | 'landscape'
 
 export interface ConversionOptions {
-  device: 'X4' | 'X3' | 'Sticky'
+  device: 'X4' | 'X3' | 'Sticky' | 'A4'
   splitMode: SplitMode
   splitSpreads: boolean
   pageOverview: PageOverviewMode
