@@ -20,5 +20,5 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true
   },
-  "include": ["src", "server"]
+  "include": ["src", "server", "e2e", "playwright.config.ts"]
 }

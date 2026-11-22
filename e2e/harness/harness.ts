@@ -23,7 +23,7 @@ async function convert(
   options: ConversionOptions,
   pipeline: Pipeline,
 ) {
-  const file = new File([bytes], name)
+  const file = new File([new Uint8Array(bytes)], name)
   const workersBefore = workersCreated
   // Without OffscreenCanvas the converter takes its main-thread fallback.
   Object.defineProperty(window, 'OffscreenCanvas', {
