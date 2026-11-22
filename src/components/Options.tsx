@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ConversionOptions } from '../lib/converter'
 import { InfoNote } from './InfoNote'
+import { DEVICE_IDS, DEVICES, type DeviceId } from '../lib/devices'
 
 interface OptionsProps {
   options: ConversionOptions
@@ -8,36 +9,8 @@ interface OptionsProps {
   fileType?: 'cbz' | 'pdf' | 'image' | 'video'
 }
 
-interface TargetDeviceOption {
-  id: ConversionOptions['device']
-  label: string
-  size: string
-  title: string
-}
-
-const STICKY_NOTICE_ID = 'device-notice-sticky'
+const DEVICE_NOTICE_ID = 'device-notice'
 const SPREAD_NOTICE_ID = 'spread-splitting-note'
-
-export const TARGET_DEVICES: TargetDeviceOption[] = [
-  {
-    id: 'X4',
-    label: 'X4 / Pro',
-    size: '480 × 800',
-    title: 'XTEink X4 and X4 Pro (480 x 800)'
-  },
-  {
-    id: 'X3',
-    label: 'X3',
-    size: '528 × 792',
-    title: 'XTEink X3 (528 x 792)'
-  },
-  {
-    id: 'Sticky',
-    label: 'Sticky',
-    size: '480 × 800',
-    title: 'Seeed Studio reTerminal Sticky with CrossPoint Reader (480 x 800)'
-  }
-]
 
 export function normalizeSplitModeForOrientation(
   orientation: ConversionOptions['orientation'],
@@ -48,8 +21,7 @@ export function normalizeSplitModeForOrientation(
 
 export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
-  const showsStickyNotice = options.device === 'Sticky'
-  const selectedDevice = TARGET_DEVICES.find(device => device.id === options.device)
+  const selectedDevice = DEVICES[options.device]
   const isImageMode = fileType === 'image'
   const isVideoMode = fileType === 'video'
   const supportsSplit = !isImageMode && !isVideoMode &&
@@ -73,23 +45,21 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
             value={options.device}
             onChange={(event) => onChange({
               ...options,
-              device: event.target.value as ConversionOptions['device']
+              device: event.target.value as DeviceId
             })}
             aria-label="Target device"
-            aria-describedby={showsStickyNotice ? STICKY_NOTICE_ID : undefined}
-            title={selectedDevice?.title}
+            aria-describedby={selectedDevice.notice ? DEVICE_NOTICE_ID : undefined}
+            title={`${selectedDevice.name} (${selectedDevice.width} x ${selectedDevice.height})`}
           >
-            {TARGET_DEVICES.map(device => (
-              <option key={device.id} value={device.id}>
-                {`[${device.label}]  ${device.size}`}
+            {DEVICE_IDS.map(id => (
+              <option key={id} value={id}>
+                {`[${DEVICES[id].label}]  ${DEVICES[id].width} × ${DEVICES[id].height}`}
               </option>
             ))}
           </select>
           <div className="device-notice-slot" aria-live="polite">
-            {showsStickyNotice && (
-              <InfoNote id={STICKY_NOTICE_ID}>
-                Requires CrossPoint Reader firmware. Not compatible with the original Seeed firmware.
-              </InfoNote>
+            {selectedDevice.notice && (
+              <InfoNote id={DEVICE_NOTICE_ID}>{selectedDevice.notice}</InfoNote>
             )}
           </div>
         </div>

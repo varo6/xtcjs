@@ -5,13 +5,15 @@ import { createExtractorFromData } from 'node-unrar-js'
 import unrarWasm from 'node-unrar-js/esm/js/unrar.wasm?url'
 import { applyDithering } from './processing/dithering'
 import { toGrayscale, applyContrast, calculateOverlapSegments, calculateFourWaySegments, calculateSpreadSegments, findContentBounds, shouldSplitPage } from './processing/image'
-import { rotateCanvas, extractAndRotate, extractRegion, resizeWithPadding, getTargetDimensions } from './processing/canvas'
+import { rotateCanvas, extractAndRotate, extractRegion, resizeWithPadding } from './processing/canvas'
+import { getTargetDimensions } from './devices'
 import { imageDataToXtg, imageDataToXth } from './processing/xtg'
 import { buildXtcFromXtgPages } from './xtc-format'
 import { extractPdfMetadata } from './metadata/pdf-outline'
 import { parseComicInfo } from './metadata/comicinfo'
 import { PageMappingContext, adjustTocForMapping } from './page-mapping'
 import { ConvertWorkerPool, isWorkerPipelineSupported } from './conversion/worker-pool'
+import { schedulePages } from './conversion/schedule-pages'
 import { loadPdfDocument } from './pdfjs'
 import type { BookMetadata } from './metadata'
 import type { ConversionOptions, ConversionResult } from './conversion/types'
@@ -310,6 +312,19 @@ async function finalizeConversionResult(
   }
 }
 
+interface LoadedArchivePage {
+  pageNum: number
+  pageOptions: ConversionOptions
+  includePreview: boolean
+  imgBlob: Blob
+}
+
+interface ConvertedArchivePage {
+  pages: EncodedPage[]
+  previewForProgress: string | null
+  previewForStorage: string | null
+}
+
 async function processArchiveSourcePages(
   totalPages: number,
   getBlob: (index: number) => Promise<Blob>,
@@ -318,109 +333,85 @@ async function processArchiveSourcePages(
   onProgress: (progress: number, previewUrl: string | null) => void
 ): Promise<{ encodedPages: EncodedPage[]; mappingCtx: PageMappingContext; sampledPreviews: string[] }> {
   const sampledPreviews: string[] = []
-  const pageResultsByIndex: EncodedPage[][] = new Array(totalPages)
-
-  let pool: ConvertWorkerPool | null = null
-  let workerDisabled = false
   let completed = 0
-  let nextIndex = 0
 
   const workerPoolSize = calculateWorkerPoolSize()
-  if (PERF_PIPELINE_V2 && isWorkerPipelineSupported()) {
-    pool = new ConvertWorkerPool(workerPoolSize)
-  }
+  const pool = PERF_PIPELINE_V2 && isWorkerPipelineSupported() ? new ConvertWorkerPool(workerPoolSize) : null
 
-  const concurrency = pool ? workerPoolSize : 1
+  const results = await schedulePages<LoadedArchivePage, ConvertedArchivePage>({
+    totalPages,
+    workers: pool && {
+      slotCount: workerPoolSize,
+      convert: async ({ pageNum, pageOptions, includePreview, imgBlob }) => {
+        const workerPages = await pool.processPage(pageNum, imgBlob, pageOptions, includePreview)
+        if (workerPages.length === 0) {
+          return null
+        }
 
-  const runSlot = async (slotIndex: number) => {
-    while (true) {
-      // If workers are disabled at runtime, continue on one main-thread lane only.
-      if (workerDisabled && slotIndex > 0) {
-        return
-      }
+        let previewForProgress: string | null = null
+        let previewForStorage: string | null = null
+        if (includePreview) {
+          const previewBytes = workerPages.find((page) => page.previewJpeg)?.previewJpeg
+          if (previewBytes) {
+            const previewBlob = new Blob([previewBytes], { type: 'image/jpeg' })
+            if (pageOptions.showProgressPreview) {
+              previewForProgress = URL.createObjectURL(previewBlob)
+            }
+            if (sampledPreviews.length < MAX_STORED_PREVIEWS) {
+              previewForStorage = await blobToDataUrl(previewBlob)
+            }
+          }
+        }
 
-      const index = nextIndex++
-      if (index >= totalPages) {
-        return
-      }
-
+        return {
+          pages: workerPages.map((page) => ({ name: page.name, xtg: page.xtg })),
+          previewForProgress,
+          previewForStorage
+        }
+      },
+      destroy: () => pool.destroy()
+    },
+    load: async (index) => {
       const pageOptions = getPageOptions(index)
       const pageNum = index + 1
       const includePreview = sampledPreviews.length < MAX_STORED_PREVIEWS &&
         shouldGenerateSampledPreview(pageNum, totalPages)
-      const imgBlob = await getBlob(index)
-
+      return { pageNum, pageOptions, includePreview, imgBlob: await getBlob(index) }
+    },
+    convertOnMainThread: async ({ pageNum, pageOptions, includePreview, imgBlob }) => {
+      const pages = await processImage(imgBlob, pageNum, pageOptions)
       let previewForProgress: string | null = null
       let previewForStorage: string | null = null
-      let pageResults: EncodedPage[] = []
 
-      if (pool && !workerDisabled) {
-        try {
-          const workerPages = await pool.processPage(pageNum, imgBlob, pageOptions, includePreview)
-          pageResults = workerPages.map((page) => ({ name: page.name, xtg: page.xtg }))
-
-          if (includePreview) {
-            let previewBytes: ArrayBuffer | undefined
-            for (const page of workerPages) {
-              if (page.previewJpeg) {
-                previewBytes = page.previewJpeg
-                break
-              }
-            }
-            if (previewBytes) {
-              const previewBlob = new Blob([previewBytes], { type: 'image/jpeg' })
-              if (pageOptions.showProgressPreview) {
-                previewForProgress = URL.createObjectURL(previewBlob)
-              }
-              if (sampledPreviews.length < MAX_STORED_PREVIEWS) {
-                previewForStorage = await blobToDataUrl(previewBlob)
-              }
-            }
-          }
-        } catch {
-          if (!workerDisabled) {
-            workerDisabled = true
-            pool.destroy()
-            pool = null
-          }
+      if (includePreview && pages.length > 0 && pages[0].canvas) {
+        const previewDataUrl = pages[0].canvas.toDataURL('image/jpeg', PREVIEW_JPEG_QUALITY)
+        if (pageOptions.showProgressPreview) {
+          previewForProgress = previewDataUrl
+        }
+        if (sampledPreviews.length < MAX_STORED_PREVIEWS) {
+          previewForStorage = previewDataUrl
         }
       }
 
-      if (pageResults.length === 0) {
-        const pages = await processImage(imgBlob, pageNum, pageOptions)
-        pageResults = pages.map((page) => encodeCanvasPage(page, pageOptions.is2bit))
-
-        if (includePreview && pages.length > 0 && pages[0].canvas) {
-          const previewDataUrl = pages[0].canvas.toDataURL('image/jpeg', PREVIEW_JPEG_QUALITY)
-          if (pageOptions.showProgressPreview) {
-            previewForProgress = previewDataUrl
-          }
-          if (sampledPreviews.length < MAX_STORED_PREVIEWS) {
-            previewForStorage = previewDataUrl
-          }
-        }
+      return {
+        pages: pages.map((page) => encodeCanvasPage(page, pageOptions.is2bit)),
+        previewForProgress,
+        previewForStorage
       }
-
-      pageResultsByIndex[index] = pageResults
+    },
+    onPageDone: ({ previewForProgress, previewForStorage }) => {
       if (previewForStorage && sampledPreviews.length < MAX_STORED_PREVIEWS) {
         sampledPreviews.push(previewForStorage)
       }
-
       completed++
       onProgress(completed / totalPages, previewForProgress)
     }
-  }
-
-  try {
-    await Promise.all(Array.from({ length: concurrency }, (_, slotIndex) => runSlot(slotIndex)))
-  } finally {
-    pool?.destroy()
-  }
+  })
 
   const mappingCtx = new PageMappingContext()
   const encodedPages: EncodedPage[] = []
   for (let i = 0; i < totalPages; i++) {
-    const pages = pageResultsByIndex[i] || []
+    const pages = results[i]?.pages || []
     mappingCtx.addOriginalPage(getOriginalPage(i), pages.length)
     encodedPages.push(...pages)
   }
