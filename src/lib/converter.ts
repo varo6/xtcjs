@@ -97,10 +97,11 @@ async function convertPages(
 
   const finish = async (converted: ConvertedPage[], options: ConversionOptions): Promise<FinishedPage> => {
     const preview = converted[0]?.preview
+    const previewUrl = preview ? await blobToDataUrl(preview) : null
     return {
       pages: converted,
-      previewForProgress: preview && options.showProgressPreview ? URL.createObjectURL(preview) : null,
-      previewForStorage: preview && storedPreviews < MAX_STORED_PREVIEWS ? await blobToDataUrl(preview) : null
+      previewForProgress: options.showProgressPreview ? previewUrl : null,
+      previewForStorage: storedPreviews < MAX_STORED_PREVIEWS ? previewUrl : null
     }
   }
 

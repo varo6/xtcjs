@@ -135,7 +135,6 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [viewerPages, setViewerPages] = useState<string[]>([])
-  const progressPreviewRef = useRef<string | null>(null)
   const pendingProgressRef = useRef<number | null>(null)
   const pendingPreviewRef = useRef<string | undefined>(undefined)
   const progressTimerRef = useRef<number | null>(null)
@@ -167,14 +166,6 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     }
   }, [])
 
-  const revokeProgressPreview = useCallback(() => {
-    const previewUrl = progressPreviewRef.current
-    if (previewUrl && previewUrl.startsWith('blob:')) {
-      URL.revokeObjectURL(previewUrl)
-    }
-    progressPreviewRef.current = null
-  }, [])
-
   const handleFiles = useCallback((files: File[]) => {
     setFileSelection(prev => ({
       ...prev,
@@ -203,14 +194,11 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     if (pendingPreviewRef.current !== undefined) {
       const nextPreview = pendingPreviewRef.current
       pendingPreviewRef.current = undefined
-
-      revokeProgressPreview()
-      progressPreviewRef.current = nextPreview ?? null
       setPreviewUrl(nextPreview ?? null)
     }
 
     lastProgressFlushRef.current = now
-  }, [revokeProgressPreview])
+  }, [])
 
   const scheduleProgressUiFlush = useCallback((force = false) => {
     if (force) {
@@ -239,7 +227,6 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     setPreviewError(null)
     setProgress(0)
     setProgressText('Processing...')
-    revokeProgressPreview()
     clearProgressTimer()
     pendingProgressRef.current = null
     pendingPreviewRef.current = undefined
@@ -292,7 +279,6 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     pendingPreviewRef.current = undefined
     setProgress(1)
     setProgressText('Complete')
-    revokeProgressPreview()
     setPreviewUrl(null)
     setIsConverting(false)
   }, [
@@ -302,7 +288,6 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     addResult,
     clearSession,
     clearProgressTimer,
-    revokeProgressPreview,
     scheduleProgressUiFlush,
   ])
 
@@ -428,12 +413,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     previewCacheRef.current.clear()
   }, [clearSession])
 
-  useEffect(() => {
-    return () => {
-      clearProgressTimer()
-      revokeProgressPreview()
-    }
-  }, [clearProgressTimer, revokeProgressPreview])
+  useEffect(() => clearProgressTimer, [clearProgressTimer])
 
   // Combine current and recovered results for display
   const allResults = [...recoveredResults, ...results]
