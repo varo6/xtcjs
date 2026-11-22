@@ -24,6 +24,8 @@ const PROPERTIES = [
 const BOUNDS: Bounds[] = [
   ...[1, 2, 3, 4, 5].flatMap((pages) => [0, 1, 2, 3].map((workers) => ({ pages, workers }))),
   { pages: 6, workers: 2 },
+  ...[1, 2, 3, 4].flatMap((pages) => [0, 1, 2, 3].map((workers) => ({ pages, workers, rejections: 1 }))),
+  { pages: 5, workers: 2, rejections: 1 },
 ]
 
 describe('schedulePages holds every property in every interleaving', () => {
