@@ -24,7 +24,7 @@ export interface Book {
   metadata: BookMetadata
   hasCover: boolean
   forceNoSplit: boolean
-  close?: () => void
+  close?: () => void | Promise<void>
 }
 
 type SourceOptions = Pick<ConversionOptions, 'videoFps'>
@@ -134,7 +134,7 @@ async function openPdf(file: File): Promise<Book> {
   }
 
   const pages = Array.from({ length: pdf.numPages }, (_, i) => ({ originalPage: i + 1, load: () => render(i + 1) }))
-  return { pages, metadata, hasCover: true, forceNoSplit: false }
+  return { pages, metadata, hasCover: true, forceNoSplit: false, close: () => pdf.destroy() }
 }
 
 async function openImage(file: File): Promise<Book> {

@@ -67,7 +67,7 @@ export async function convertToXtc(
       previewMode: 'sparse'
     }
   } finally {
-    book.close?.()
+    await book.close?.()
   }
 }
 
