@@ -1,6 +1,3 @@
-// API client for communicating with Hono backend
-
-// In production with separate API server, set VITE_API_URL=https://api.xtcjs.app/api
 export const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
 export interface DailyStats {

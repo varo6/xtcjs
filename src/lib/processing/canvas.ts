@@ -1,20 +1,9 @@
 // Canvas utility functions for rotation and resizing
 
-const DEVICE_DIMENSIONS = {
-  X4: { width: 480, height: 800 },
-  X3: { width: 528, height: 792 },
-  Sticky: { width: 480, height: 800 }
-} as const;
+import { DEVICES } from '../devices'
 
-export type TargetDevice = keyof typeof DEVICE_DIMENSIONS;
-
-// Default target dimensions for XTEink X4
-export const TARGET_WIDTH = DEVICE_DIMENSIONS.X4.width;
-export const TARGET_HEIGHT = DEVICE_DIMENSIONS.X4.height;
-
-export function getTargetDimensions(device: TargetDevice = 'X4') {
-  return DEVICE_DIMENSIONS[device] || DEVICE_DIMENSIONS.X4;
-}
+export const TARGET_WIDTH = DEVICES.X4.width;
+export const TARGET_HEIGHT = DEVICES.X4.height;
 
 /**
  * Rotate canvas by specified degrees
