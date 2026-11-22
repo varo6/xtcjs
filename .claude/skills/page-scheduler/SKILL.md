@@ -43,19 +43,14 @@ Each property is in `src/lib/conversion/schedule-pages.model-check.ts`.
 | `EVERY_PAGE_ONCE_IN_ORDER`: every page is claimed, converted and finished exactly once, and `results[i]` is page i. | The book is missing pages, repeats pages, or has them out of order. |
 | `FINISHES_AND_DESTROYS_POOL`: `schedulePages` always resolves, and every worker is terminated. | The conversion spinner never stops, or idle workers keep their memory. |
 | `FALLBACK_STARTS_PAGES_ONE_AT_A_TIME`: after the pool is destroyed, pages that start loading run one at a time. | Every slot converts on the main thread in parallel and low-memory devices run out of memory (63552f3). |
-| `ONE_MAIN_THREAD_PAGE_AT_A_TIME` (stricter): at most one main-thread conversion at any moment. | Same harm, limited to one burst of up to pool-size pages. |
+| `ONE_MAIN_THREAD_PAGE_AT_A_TIME`: at most one main-thread conversion at any moment. | Pages already claimed when the fallback triggers convert together, a burst of up to pool-size main-thread conversions. |
 
 Bounds: every combination of 1 to 5 pages and 0 to 3 workers, plus 6 pages and 2 workers. 0 workers means no pool (one main-thread slot). 5 pages and 3 workers alone is about 77,000 runs.
 
-## Known finding
+## Past bugs the check replays
 
-`ONE_MAIN_THREAD_PAGE_AT_A_TIME` fails on the current code, and the test `FINDING: pages already claimed when the fallback triggers all convert on the main thread together` asserts the counterexample:
-
-1. Slots 0 and 1 claim pages 1 and 2.
-2. Page 1's worker job fails, so the pool is destroyed and page 1 starts on the main thread.
-3. Page 2 finishes loading, finds no pool, and also starts on the main thread.
-
-The same happens when page 2 is already on a worker: `destroy()` rejects its job and slot 1 converts it on the main thread. Slots above 0 exit only after finishing their current page. If you fix this, the FINDING test fails; move `ONE_MAIN_THREAD_PAGE_AT_A_TIME` into `PROPERTIES` in the test file and delete the FINDING test.
+- 63552f3: before it, every slot kept starting pages on the main thread after the fallback. `src/lib/conversion/fixtures/schedule-pages-before-63552f3.ts` keeps that loop, and the replay test asserts the counterexample.
+- After 63552f3, pages other slots had already claimed still converted on the main thread together (pool-size burst). `schedulePages` now queues every main-thread conversion behind the previous one (`convertOnMainThreadAlone`), so `ONE_MAIN_THREAD_PAGE_AT_A_TIME` holds. Removing the queue makes it fail at 2 pages and 2 workers.
 
 ## Reading a failure
 

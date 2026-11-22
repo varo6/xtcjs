@@ -18,9 +18,9 @@ export interface SchedulePagesOptions<Loaded, Result> {
 
 /**
  * Converts every page, preferring the worker pool. The first worker failure
- * destroys the pool; from then on pages are converted on the main thread, and
- * only slot 0 starts new pages so low-memory devices don't run several
- * main-thread conversions at once (63552f3).
+ * destroys the pool; from then on pages are converted on the main thread, one
+ * at a time, so low-memory devices never run several main-thread conversions
+ * at once (63552f3).
  *
  * Formally checked by `bun run verify:scheduler`; see .claude/skills/page-scheduler.
  */
@@ -34,6 +34,13 @@ export async function schedulePages<Loaded, Result>({
   const results: Result[] = new Array(totalPages)
   let pool = workers
   let nextIndex = 0
+  let mainThreadTurn: Promise<unknown> = Promise.resolve()
+
+  const convertOnMainThreadAlone = (page: Loaded): Promise<Result> => {
+    const turn = mainThreadTurn.then(() => convertOnMainThread(page))
+    mainThreadTurn = turn.catch(() => {})
+    return turn
+  }
 
   const runSlot = async (slotIndex: number) => {
     while (true) {
@@ -62,7 +69,7 @@ export async function schedulePages<Loaded, Result>({
       }
 
       if (result === null) {
-        result = await convertOnMainThread(page)
+        result = await convertOnMainThreadAlone(page)
       }
 
       results[index] = result
