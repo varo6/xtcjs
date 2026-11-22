@@ -12,12 +12,32 @@ import {
   cleanupExpiredConversions,
   getSessionConversionRefs,
   getRecoveredConversionRefs,
+  EXPIRATION_MS,
   type StoredConversionRef,
 } from '../lib/storage'
 import type { ConversionResult } from '../lib/conversion/types'
 
-export interface StoredResult extends StoredConversionRef {
-  // For compatibility with ConversionResult interface used by Results component
+export type StoredResult = StoredConversionRef
+
+const MEMORY_ID_PREFIX = 'mem-'
+
+function memoryResult(sessionId: string, result: ConversionResult): StoredResult {
+  const createdAt = Date.now()
+  return {
+    id: `${MEMORY_ID_PREFIX}${createdAt}-${Math.random().toString(36).slice(2)}`,
+    sessionId,
+    name: result.name,
+    size: result.size || 0,
+    pageCount: result.pageCount || 0,
+    error: result.error,
+    createdAt,
+    expiresAt: createdAt + EXPIRATION_MS,
+    status: result.error ? 'error' : 'complete',
+  }
+}
+
+function isMemoryResult(result: Pick<StoredResult, 'id'>): boolean {
+  return result.id.startsWith(MEMORY_ID_PREFIX)
 }
 
 export function withoutStoredResult<T extends { id: string }>(results: T[], id: string): T[] {
@@ -28,7 +48,7 @@ export async function deleteStoredResult(
   result: Pick<StoredResult, 'id'>,
   deletePersisted: (id: string) => Promise<void> = deleteConversion,
 ): Promise<boolean> {
-  if (result.id.startsWith('mem-')) return true
+  if (isMemoryResult(result)) return true
 
   try {
     await deletePersisted(result.id)
@@ -59,7 +79,6 @@ export function useStoredResults(): UseStoredResultsReturn {
   const [isStorageEnabled, setIsStorageEnabled] = useState(false)
   const sessionIdRef = useRef<string>('')
 
-  // Initialize storage and load recovered results
   useEffect(() => {
     const init = async () => {
       if (!isStorageAvailable()) {
@@ -71,16 +90,13 @@ export function useStoredResults(): UseStoredResultsReturn {
         await openDatabase()
         setIsStorageEnabled(true)
 
-        // Generate session ID
         sessionIdRef.current = generateSessionId()
 
-        // Clean up expired conversions
         const deletedCount = await cleanupExpiredConversions()
         if (deletedCount > 0) {
           console.log(`Cleaned up ${deletedCount} expired conversions`)
         }
 
-        // Load recovered results from previous sessions
         const recovered = await getRecoveredConversionRefs(sessionIdRef.current)
         if (recovered.length > 0) {
           setRecoveredResults(recovered)
@@ -93,23 +109,11 @@ export function useStoredResults(): UseStoredResultsReturn {
     init()
   }, [])
 
-  // Add a new conversion result
   const addResult = useCallback(async (result: ConversionResult): Promise<StoredResult | null> => {
     if (!isStorageEnabled || !sessionIdRef.current) {
-      // Fallback: just return a fake ref for in-memory mode
-      const fakeRef: StoredResult = {
-        id: `mem-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        sessionId: 'in-memory',
-        name: result.name,
-        size: result.size || 0,
-        pageCount: result.pageCount || 0,
-        error: result.error,
-        createdAt: Date.now(),
-        expiresAt: Date.now() + 4.5 * 60 * 60 * 1000,
-        status: result.error ? 'error' : 'complete',
-      }
-      setResults(prev => [...prev, fakeRef])
-      return fakeRef
+      const ref = memoryResult('in-memory', result)
+      setResults(prev => [...prev, ref])
+      return ref
     }
 
     try {
@@ -118,24 +122,12 @@ export function useStoredResults(): UseStoredResultsReturn {
       return ref
     } catch (err) {
       console.error('Failed to store conversion:', err)
-      // Fallback to in-memory
-      const fakeRef: StoredResult = {
-        id: `mem-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        sessionId: sessionIdRef.current,
-        name: result.name,
-        size: result.size || 0,
-        pageCount: result.pageCount || 0,
-        error: result.error,
-        createdAt: Date.now(),
-        expiresAt: Date.now() + 4.5 * 60 * 60 * 1000,
-        status: result.error ? 'error' : 'complete',
-      }
-      setResults(prev => [...prev, fakeRef])
-      return fakeRef
+      const ref = memoryResult(sessionIdRef.current, result)
+      setResults(prev => [...prev, ref])
+      return ref
     }
   }, [isStorageEnabled])
 
-  // Clear current session results
   const clearSession = useCallback(async () => {
     if (isStorageEnabled && sessionIdRef.current) {
       try {
@@ -147,7 +139,6 @@ export function useStoredResults(): UseStoredResultsReturn {
     setResults([])
   }, [isStorageEnabled])
 
-  // Clear all results including recovered
   const clearAll = useCallback(async () => {
     if (isStorageEnabled) {
       try {
@@ -160,7 +151,6 @@ export function useStoredResults(): UseStoredResultsReturn {
     setRecoveredResults([])
   }, [isStorageEnabled])
 
-  // Dismiss recovered results banner without deleting data
   const dismissRecovered = useCallback(() => {
     setRecoveredResults([])
   }, [])
@@ -176,7 +166,6 @@ export function useStoredResults(): UseStoredResultsReturn {
     return true
   }, [])
 
-  // Download a result by fetching data from IndexedDB
   const downloadResult = useCallback(async (result: StoredResult): Promise<void> => {
     if (result.error) return
 
@@ -201,7 +190,6 @@ export function useStoredResults(): UseStoredResultsReturn {
     }
   }, [])
 
-  // Get preview images from IndexedDB
   const getPreviewImages = useCallback(async (result: StoredResult): Promise<string[]> => {
     try {
       const images = await getConversionPreviews(result.id)

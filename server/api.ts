@@ -8,25 +8,19 @@ api.use('*', cors({
   origin: ['https://xtcjs.app', 'http://localhost:5173'],
 }))
 
-// Config
-const FLUSH_INTERVAL_MS = 60 * 60 * 1000 // 1 hour default
+const FLUSH_INTERVAL_MS = 60 * 60 * 1000
 
-// Check if running in Bun (has bun:sqlite available)
 const isBun = typeof globalThis.Bun !== 'undefined'
 
-// Database instance (only available in Bun)
 let db: Database | null = null
 
-// In-memory counters (flushed periodically when db available)
 const pending = {
   cbz: 0,
   pdf: 0,
 }
 
-// Torrent click counter (tracked separately)
 let pendingTorrent = 0
 
-// In-memory fallback for dev mode without Bun
 const memoryStats = {
   daily: [] as { date: string; cbz_count: number; pdf_count: number }[],
   totals: { cbz: 0, pdf: 0 },
@@ -48,12 +42,10 @@ const nyaaFields = {
   downloads: /<nyaa:downloads>(.+?)<\/nyaa:downloads>/,
 } as const
 
-// Get today's date as YYYY-MM-DD
 function today(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
-// Initialize SQLite only in Bun environment
 async function initDatabase() {
   if (!isBun) {
     console.log('[api] Running without Bun - using in-memory stats only')
@@ -67,7 +59,6 @@ async function initDatabase() {
     db = new Database(DB_PATH, { create: true })
     db.run('PRAGMA journal_mode = WAL')
 
-    // Create tables
     db.run(`
       CREATE TABLE IF NOT EXISTS daily_stats (
         date TEXT PRIMARY KEY,
@@ -90,10 +81,8 @@ async function initDatabase() {
   }
 }
 
-// Initialize on module load
 initDatabase()
 
-// Flush pending counters to SQLite
 function flush() {
   const hasPending = pending.cbz > 0 || pending.pdf > 0
   const hasTorrent = pendingTorrent > 0
@@ -137,10 +126,8 @@ function flush() {
   pendingTorrent = 0
 }
 
-// Periodic flush
 setInterval(flush, FLUSH_INTERVAL_MS)
 
-// Flush on shutdown
 if (typeof process !== 'undefined') {
   process.on('SIGINT', () => {
     flush()
@@ -154,7 +141,6 @@ if (typeof process !== 'undefined') {
   })
 }
 
-// Get statistics
 api.get('/stats', (c) => {
   const days = Number(c.req.query('days') || 30)
 
@@ -188,7 +174,6 @@ api.get('/stats', (c) => {
     })
   }
 
-  // In-memory fallback response
   return c.json({
     pending: { ...pending },
     totals: {
@@ -201,7 +186,6 @@ api.get('/stats', (c) => {
   })
 })
 
-// Record a conversion
 api.post('/stats/conversion', async (c) => {
   const body = await c.req.json<{ type: 'cbz' | 'pdf' | 'torrent' }>()
 
@@ -216,13 +200,11 @@ api.post('/stats/conversion', async (c) => {
   return c.json({ success: true })
 })
 
-// Force flush (for admin/debugging)
 api.post('/stats/flush', (c) => {
   flush()
   return c.json({ success: true, message: 'Flushed to database' })
 })
 
-// Nyaa.si manga search proxy
 api.get('/nyaa', async (c) => {
   const q = c.req.query('q')
   if (!q) return c.json([])
@@ -269,7 +251,6 @@ api.get('/nyaa', async (c) => {
   }
 })
 
-// Health check
 api.get('/health', (c) => {
   return c.json({
     status: 'ok',

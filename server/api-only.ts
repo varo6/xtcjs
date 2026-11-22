@@ -4,7 +4,6 @@ import { api } from './api'
 
 const app = new Hono()
 
-// Enable CORS for frontend on different domain
 app.use(
   '/api/*',
   cors({
@@ -14,10 +13,8 @@ app.use(
   })
 )
 
-// Mount API routes under /api
 app.route('/api', api)
 
-// Root health check
 app.get('/', (c) => c.json({ status: 'ok', service: 'xtcjs-api' }))
 
 export default {

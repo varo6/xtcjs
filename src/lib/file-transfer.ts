@@ -1,5 +1,3 @@
-// Shared state for transferring files between pages
-
 type TransferListener = (files: File[]) => void
 
 let pendingFiles: File[] = []
