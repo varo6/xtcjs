@@ -1,7 +1,7 @@
 // Page-side entry for the e2e tests. It only wires the app's public modules to
 // `window.xtcHarness`; all assertions live in the tests.
 import { convertToXtc, type ConversionOptions } from '../../src/lib/converter'
-import { getTargetDimensions } from '../../src/lib/processing/canvas'
+import { getTargetDimensions } from '../../src/lib/devices'
 
 export type SourceType = 'cbz' | 'pdf' | 'image'
 export type Pipeline = 'worker' | 'main-thread'
