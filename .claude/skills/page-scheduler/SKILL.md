@@ -15,11 +15,11 @@ The check runs the real `schedulePages` and the real `ConvertWorkerPool` (with a
 bun run verify:scheduler
 ```
 
-About 5 seconds. It prints how many interleavings it explored (98,539 at the sync commit). `bun test` runs it too. No toolchain beyond Bun.
+About 5 seconds. It prints how many interleavings it explored (98,539). `bun test` runs it too. No toolchain beyond Bun.
 
 ## Does my change touch the verified code?
 
-Coverage, last confirmed at sync commit `dcf3265`:
+Coverage, last confirmed at sync commit `d4b7951`:
 
 | Code | What the check relies on |
 | --- | --- |
@@ -29,10 +29,10 @@ Coverage, last confirmed at sync commit `dcf3265`:
 | `src/lib/conversion/fixtures/schedule-pages-before-63552f3.ts` | The 63552f3^ loop, kept to prove the check catches that bug. Never update it to match new code. |
 
 ```sh
-git log --oneline dcf3265..HEAD -- src/lib/conversion/schedule-pages.ts src/lib/conversion/worker-pool.ts src/lib/converter.ts
+git log --oneline d4b7951..HEAD -- src/lib/conversion/schedule-pages.ts src/lib/conversion/worker-pool.ts src/lib/converter.ts
 ```
 
-Any commit listed means the check may no longer describe the code. If `dcf3265` is missing from history (squash merge), use the commit that last changed this file: `git log -1 --format=%h -- .claude/skills/page-scheduler/SKILL.md`.
+Any commit listed means the check may no longer describe the code. If `d4b7951` is missing from history (squash merge), use the commit that last changed this file: `git log -1 --format=%h -- .claude/skills/page-scheduler/SKILL.md`.
 
 ## Properties
 
