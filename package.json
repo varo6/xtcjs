@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit -p .",
     "lint": "bun scripts/lint-imports.ts",
     "check": "bun run typecheck && bun run lint && bun test",
+    "verify:scheduler": "bun test src/lib/conversion/schedule-pages",
     "build:static": "VITE_API_URL=https://api.xtcjs.app/api vite build",
     "preview": "vite preview",
     "serve": "bun run server/index.ts",
