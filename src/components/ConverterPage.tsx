@@ -11,6 +11,7 @@ import type { ConversionOptions } from '../lib/conversion/types'
 import { recordConversion } from '../lib/api'
 import { consumePendingFiles } from '../lib/file-transfer'
 import { useStoredResults, type StoredResult } from '../hooks/useStoredResults'
+import { acceptsFile } from '../lib/input-kinds'
 import { extractXtcPages } from '../lib/xtc-reader'
 import { normalizeUserErrorMessage } from '../lib/errors'
 import { getDefaultContrast } from '../lib/conversion/defaults'
@@ -91,19 +92,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     let noticeTimer: ReturnType<typeof setTimeout> | null = null
     const pending = consumePendingFiles()
     if (pending.length > 0) {
-      const matchingFiles = pending.filter(f => {
-        const name = f.name.toLowerCase()
-        if (fileType === 'pdf') {
-          return name.endsWith('.pdf')
-        }
-        if (fileType === 'image') {
-          return /\.(jpg|jpeg|png|webp|bmp|gif)$/i.test(name)
-        }
-        if (fileType === 'video') {
-          return /\.(mp4|webm|mkv|avi|mov)$/i.test(name)
-        }
-        return name.endsWith('.cbz') || name.endsWith('.cbr')
-      })
+      const matchingFiles = pending.filter((file) => acceptsFile(fileType, file.name))
       if (matchingFiles.length > 0) {
         const message = `${matchingFiles.length} file${matchingFiles.length > 1 ? 's' : ''} received from merge/split`
         setFileSelection({

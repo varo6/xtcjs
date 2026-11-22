@@ -1,7 +1,7 @@
 const DB_NAME = 'xtcjs-storage'
 const DB_VERSION = 1
 const STORE_NAME = 'conversions'
-const EXPIRATION_MS = 4.5 * 60 * 60 * 1000
+export const EXPIRATION_MS = 4.5 * 60 * 60 * 1000
 
 export interface StoredConversion {
   id: string

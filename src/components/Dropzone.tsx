@@ -1,8 +1,9 @@
 import { useCallback, useRef, useState } from 'react'
+import { acceptAttribute, acceptsFile, inputLabel, type InputKind } from '../lib/input-kinds'
 
 interface DropzoneProps {
   onFiles: (files: File[]) => void
-  fileType?: 'cbz' | 'pdf' | 'image' | 'video' | 'xtc'
+  fileType?: InputKind
   multiple?: boolean
 }
 
@@ -10,44 +11,11 @@ export function Dropzone({ onFiles, fileType = 'cbz', multiple = true }: Dropzon
   const [isDragover, setIsDragover] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const accept = fileType === 'pdf'
-    ? '.pdf,.PDF'
-    : (fileType === 'image'
-      ? '.jpg,.jpeg,.png,.webp,.bmp,.gif'
-      : (fileType === 'video'
-        ? '.mp4,.webm,.mkv,.avi,.mov'
-        : (fileType === 'xtc' ? '.xtc,.xtch' : '.cbz,.CBZ,.cbr,.CBR')))
-  const label = fileType === 'pdf'
-    ? 'PDF'
-    : (fileType === 'image'
-      ? 'Image'
-      : (fileType === 'video' ? 'Video' : (fileType === 'xtc' ? 'XTC/XTCH' : 'CBZ/CBR')))
+  const accept = acceptAttribute(fileType)
+  const label = inputLabel(fileType)
 
   const filterFiles = useCallback((files: FileList) => {
-    if (fileType === 'pdf') {
-      return Array.from(files).filter(f =>
-        f.name.toLowerCase().endsWith('.pdf')
-      )
-    }
-    if (fileType === 'image') {
-      return Array.from(files).filter(f =>
-        /\.(jpg|jpeg|png|webp|bmp|gif)$/i.test(f.name)
-      )
-    }
-    if (fileType === 'video') {
-      return Array.from(files).filter(f =>
-        /\.(mp4|webm|mkv|avi|mov)$/i.test(f.name)
-      )
-    }
-    if (fileType === 'xtc') {
-      return Array.from(files).filter(f =>
-        /\.(xtc|xtch)$/i.test(f.name)
-      )
-    }
-    return Array.from(files).filter(f => {
-      const name = f.name.toLowerCase()
-      return name.endsWith('.cbz') || name.endsWith('.cbr')
-    })
+    return Array.from(files).filter((file) => acceptsFile(fileType, file.name))
   }, [fileType])
 
   const handleClick = useCallback(() => {

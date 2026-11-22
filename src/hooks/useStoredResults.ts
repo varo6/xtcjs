@@ -12,11 +12,33 @@ import {
   cleanupExpiredConversions,
   getSessionConversionRefs,
   getRecoveredConversionRefs,
+  EXPIRATION_MS,
   type StoredConversionRef,
 } from '../lib/storage'
 import type { ConversionResult } from '../lib/conversion/types'
 
-export interface StoredResult extends StoredConversionRef {}
+export type StoredResult = StoredConversionRef
+
+const MEMORY_ID_PREFIX = 'mem-'
+
+function memoryResult(sessionId: string, result: ConversionResult): StoredResult {
+  const createdAt = Date.now()
+  return {
+    id: `${MEMORY_ID_PREFIX}${createdAt}-${Math.random().toString(36).slice(2)}`,
+    sessionId,
+    name: result.name,
+    size: result.size || 0,
+    pageCount: result.pageCount || 0,
+    error: result.error,
+    createdAt,
+    expiresAt: createdAt + EXPIRATION_MS,
+    status: result.error ? 'error' : 'complete',
+  }
+}
+
+function isMemoryResult(result: Pick<StoredResult, 'id'>): boolean {
+  return result.id.startsWith(MEMORY_ID_PREFIX)
+}
 
 export function withoutStoredResult<T extends { id: string }>(results: T[], id: string): T[] {
   return results.filter((result) => result.id !== id)
@@ -26,7 +48,7 @@ export async function deleteStoredResult(
   result: Pick<StoredResult, 'id'>,
   deletePersisted: (id: string) => Promise<void> = deleteConversion,
 ): Promise<boolean> {
-  if (result.id.startsWith('mem-')) return true
+  if (isMemoryResult(result)) return true
 
   try {
     await deletePersisted(result.id)
@@ -89,19 +111,9 @@ export function useStoredResults(): UseStoredResultsReturn {
 
   const addResult = useCallback(async (result: ConversionResult): Promise<StoredResult | null> => {
     if (!isStorageEnabled || !sessionIdRef.current) {
-      const fakeRef: StoredResult = {
-        id: `mem-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        sessionId: 'in-memory',
-        name: result.name,
-        size: result.size || 0,
-        pageCount: result.pageCount || 0,
-        error: result.error,
-        createdAt: Date.now(),
-        expiresAt: Date.now() + 4.5 * 60 * 60 * 1000,
-        status: result.error ? 'error' : 'complete',
-      }
-      setResults(prev => [...prev, fakeRef])
-      return fakeRef
+      const ref = memoryResult('in-memory', result)
+      setResults(prev => [...prev, ref])
+      return ref
     }
 
     try {
@@ -110,19 +122,9 @@ export function useStoredResults(): UseStoredResultsReturn {
       return ref
     } catch (err) {
       console.error('Failed to store conversion:', err)
-      const fakeRef: StoredResult = {
-        id: `mem-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        sessionId: sessionIdRef.current,
-        name: result.name,
-        size: result.size || 0,
-        pageCount: result.pageCount || 0,
-        error: result.error,
-        createdAt: Date.now(),
-        expiresAt: Date.now() + 4.5 * 60 * 60 * 1000,
-        status: result.error ? 'error' : 'complete',
-      }
-      setResults(prev => [...prev, fakeRef])
-      return fakeRef
+      const ref = memoryResult(sessionIdRef.current, result)
+      setResults(prev => [...prev, ref])
+      return ref
     }
   }, [isStorageEnabled])
 
