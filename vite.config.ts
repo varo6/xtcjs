@@ -9,6 +9,12 @@ import { copyPdfJsWasmAssets } from './scripts/pdfjs-wasm'
 const projectRoot = import.meta.dirname
 
 export default defineConfig({
+  optimizeDeps: {
+    exclude: ['@jsquash/jxl'],
+  },
+  worker: {
+    format: 'es',
+  },
   plugins: [
     TanStackRouterVite({
       target: 'react',
