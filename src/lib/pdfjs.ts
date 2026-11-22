@@ -64,6 +64,16 @@ function disablePdfWorker(): void {
   workerDisabled = true
 }
 
+// A worker that cannot run (blocked by CSP, failed to evaluate) does not throw
+// from its constructor; it only fires 'error'. pdf.js would wait on its port
+// forever, so wait for the "ready" message the pdf.js worker posts on startup.
+function waitForWorkerStart(worker: Worker): Promise<boolean> {
+  return new Promise((resolve) => {
+    worker.addEventListener('message', () => resolve(true), { once: true })
+    worker.addEventListener('error', () => resolve(false), { once: true })
+  })
+}
+
 async function ensurePdfWorker(pdfjsLib: PdfJsModule): Promise<boolean> {
   if (workerDisabled || typeof Worker === 'undefined') {
     return false
@@ -76,6 +86,11 @@ async function ensurePdfWorker(pdfjsLib: PdfJsModule): Promise<boolean> {
   try {
     const PdfJsWorker = await loadPdfWorker()
     const worker = new PdfJsWorker()
+    if (!await waitForWorkerStart(worker)) {
+      worker.terminate()
+      disablePdfWorker()
+      return false
+    }
     worker.addEventListener('error', () => {
       if (sharedWorker === worker) {
         disablePdfWorker()
