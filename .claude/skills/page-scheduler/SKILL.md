@@ -1,6 +1,6 @@
 ---
 name: page-scheduler
-description: Model-check the page scheduler that converts CBZ/CBR pages across the Web Worker pool with a main-thread fallback (schedulePages, ConvertWorkerPool). Use before and after any change to src/lib/conversion/schedule-pages.ts, src/lib/conversion/worker-pool.ts, or processArchiveSourcePages in src/lib/converter.ts, and when a conversion hangs, drops or duplicates pages, or runs out of memory after a worker failure.
+description: Model-check the page scheduler that converts the pages of every input format across the Web Worker pool with a main-thread fallback (schedulePages, ConvertWorkerPool). Use before and after any change to src/lib/conversion/schedule-pages.ts, src/lib/conversion/worker-pool.ts, or convertPages in src/lib/converter.ts, and when a conversion hangs, drops or duplicates pages, or runs out of memory after a worker failure.
 ---
 
 # Page scheduler model check
@@ -15,24 +15,24 @@ The check runs the real `schedulePages` and the real `ConvertWorkerPool` (with a
 bun run verify:scheduler
 ```
 
-About 5 seconds. It prints how many interleavings it explored (98,539). `bun test` runs it too. No toolchain beyond Bun.
+About 5 seconds. It prints how many interleavings it explored (46,127). `bun test` runs it too. No toolchain beyond Bun.
 
 ## Does my change touch the verified code?
 
-Coverage, last confirmed at sync commit `d4b7951`:
+Coverage, last confirmed at sync commit `f455991`:
 
 | Code | What the check relies on |
 | --- | --- |
 | `src/lib/conversion/schedule-pages.ts` `schedulePages` | Checked directly. Every line runs under the harness. |
-| `src/lib/conversion/worker-pool.ts` `ConvertWorkerPool` (`processPage`, `destroy`, `pump`, `worker.onmessage`) | Checked directly through a fake `Worker`. `worker.onerror` (a crash) is not driven; it rejects the job the same way an error message does. |
-| `src/lib/converter.ts` `processArchiveSourcePages` | Not checked. It must pass `slotCount` equal to the pool size and a `destroy` that calls `pool.destroy()`. Read it when it changes. |
+| `src/lib/conversion/worker-pool.ts` `ConvertWorkerPool` (`processPage`, `destroy`, `pump`, `worker.onmessage`) | Checked directly through a fake `Worker`. `worker.onerror` (a crash) is not driven; it rejects the job the same way an error message does. The transfer list (the `ImageBitmap` of a PDF page or video frame) is ignored by the fake. |
+| `src/lib/converter.ts` `convertPages` | Not checked. It must pass `slotCount` equal to the pool size and a `destroy` that calls `pool.destroy()`. Read it when it changes. |
 | `src/lib/conversion/fixtures/schedule-pages-before-63552f3.ts` | The 63552f3^ loop, kept to prove the check catches that bug. Never update it to match new code. |
 
 ```sh
-git log --oneline d4b7951..HEAD -- src/lib/conversion/schedule-pages.ts src/lib/conversion/worker-pool.ts src/lib/converter.ts
+git log --oneline f455991..HEAD -- src/lib/conversion/schedule-pages.ts src/lib/conversion/worker-pool.ts src/lib/converter.ts
 ```
 
-Any commit listed means the check may no longer describe the code. If `d4b7951` is missing from history (squash merge), use the commit that last changed this file: `git log -1 --format=%h -- .claude/skills/page-scheduler/SKILL.md`.
+Any commit listed means the check may no longer describe the code. If `f455991` is missing from history (squash merge), use the commit that last changed this file: `git log -1 --format=%h -- .claude/skills/page-scheduler/SKILL.md`.
 
 ## Properties
 
@@ -57,7 +57,7 @@ Bounds: every combination of 1 to 5 pages and 0 to 3 workers, plus 6 pages and 2
 A failure prints the property, the bounds, and the shortest path found, in steps such as `the worker fails on page 1` and `page 3 starts loading`. Each step is a promise the harness settled or a call the scheduler made.
 
 - **Real bug**: the steps describe something the browser can do: any load finishing in any order, any worker job failing, `destroy()` rejecting jobs still running. Fix the code, not the property.
-- **Modeling error**: a step the real system cannot take. The harness treats every `load` as able to finish at any time, which is true for CBZ (`entry.async('blob')`) and over-approximates CBR (an already-resolved promise). If a failure needs a CBR load to wait, it may not happen in production; say so rather than weakening the property.
+- **Modeling error**: a step the real system cannot take. The harness treats every `load` as able to finish at any time. That is true for CBZ (`entry.async('blob')`) and PDF (a page render), and over-approximates CBR and image (an already-resolved promise) and video (frames are captured one at a time, so loads finish in order). If a failure needs one of those loads to wait or finish out of order, it may not happen in production; say so rather than weakening the property.
 - `Replay diverged: the harness is not deterministic` means the scheduler now waits on something the harness does not control, such as a timer. Route it through a callback the harness can settle.
 
 ## When you change the scheduler on purpose
@@ -70,8 +70,7 @@ A failure prints the property, the bounds, and the shortest path found, in steps
 
 ## Not covered
 
-- `processArchiveSourcePages` glue: preview handling, `onProgress`, page mapping.
+- `convertPages` glue: preview handling, `onProgress`; page mapping in `convertToXtc`.
 - A failing `load` or main-thread conversion. Either rejects `schedulePages`; other slots keep running in the background.
 - Workers returning zero pages (the scheduler then reconverts on the main thread).
 - More than 6 pages or 3 workers. 6 pages and 3 workers passes in about 36 seconds; run it by editing `BOUNDS` when a change needs it.
-- PDF and video conversion, which do not use this scheduler.
