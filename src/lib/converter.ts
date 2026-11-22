@@ -360,7 +360,7 @@ async function processArchiveSourcePages(
           pageResults = workerPages.map((page) => ({ name: page.name, xtg: page.xtg }))
 
           if (includePreview) {
-            let previewBytes: Uint8Array | undefined
+            let previewBytes: ArrayBuffer | undefined
             for (const page of workerPages) {
               if (page.previewJpeg) {
                 previewBytes = page.previewJpeg
