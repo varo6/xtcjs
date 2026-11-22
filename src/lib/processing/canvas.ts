@@ -1,101 +1,70 @@
-// Canvas utility functions for rotation and resizing
+// Canvas primitives that work on OffscreenCanvas (worker, or main thread when
+// available) and HTMLCanvasElement (main thread without OffscreenCanvas).
 
 import { DEVICES } from '../devices'
 
-export const TARGET_WIDTH = DEVICES.X4.width;
-export const TARGET_HEIGHT = DEVICES.X4.height;
+export const TARGET_WIDTH = DEVICES.X4.width
+export const TARGET_HEIGHT = DEVICES.X4.height
 
-/**
- * Rotate canvas by specified degrees
- */
-export function rotateCanvas(canvas: HTMLCanvasElement, degrees: number): HTMLCanvasElement {
-  const rotated = document.createElement('canvas');
+export type PageCanvas = OffscreenCanvas | HTMLCanvasElement
 
-  if (degrees === -90 || degrees === 90) {
-    rotated.width = canvas.height;
-    rotated.height = canvas.width;
-  } else {
-    rotated.width = canvas.width;
-    rotated.height = canvas.height;
+export function createCanvas(width: number, height: number): PageCanvas {
+  if (typeof OffscreenCanvas !== 'undefined') {
+    return new OffscreenCanvas(width, height)
   }
-
-  const ctx = rotated.getContext('2d')!;
-  ctx.translate(rotated.width / 2, rotated.height / 2);
-  ctx.rotate(degrees * Math.PI / 180);
-  ctx.drawImage(canvas, -canvas.width / 2, -canvas.height / 2);
-
-  return rotated;
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  return canvas
 }
 
-/**
- * Extract a region from canvas and rotate it
- */
-export function extractAndRotate(
-  srcCanvas: HTMLCanvasElement,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  degrees = 90
-): HTMLCanvasElement {
-  const extractCanvas = document.createElement('canvas');
-  extractCanvas.width = w;
-  extractCanvas.height = h;
-  const ctx = extractCanvas.getContext('2d')!;
-  ctx.drawImage(srcCanvas, x, y, w, h, 0, 0, w, h);
-
-  return rotateCanvas(extractCanvas, degrees);
+/** Every page canvas is opaque; the image filters take the DOM context type. */
+export function context2d(canvas: PageCanvas): CanvasRenderingContext2D {
+  return canvas.getContext('2d', { alpha: false }) as CanvasRenderingContext2D
 }
 
-/**
- * Extract a region from canvas without rotation (for portrait mode)
- */
-export function extractRegion(
-  srcCanvas: HTMLCanvasElement,
-  x: number,
-  y: number,
-  w: number,
-  h: number
-): HTMLCanvasElement {
-  const extractCanvas = document.createElement('canvas');
-  extractCanvas.width = w;
-  extractCanvas.height = h;
-  const ctx = extractCanvas.getContext('2d')!;
-  ctx.drawImage(srcCanvas, x, y, w, h, 0, 0, w, h);
-
-  return extractCanvas;
+export function encodeJpeg(canvas: PageCanvas, quality: number): Promise<Blob> {
+  if ('convertToBlob' in canvas) {
+    return canvas.convertToBlob({ type: 'image/jpeg', quality })
+  }
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('Failed to encode canvas preview')), 'image/jpeg', quality)
+  })
 }
 
-/**
- * Resize canvas with padding to fit target dimensions
- */
-export function resizeWithPadding(
-  canvas: HTMLCanvasElement,
-  padColor = 255,
-  targetWidth: number = TARGET_WIDTH,
-  targetHeight: number = TARGET_HEIGHT
-): HTMLCanvasElement {
-  const result = document.createElement('canvas');
-  result.width = targetWidth;
-  result.height = targetHeight;
-  const ctx = result.getContext('2d')!;
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
+export function rotateCanvas(canvas: PageCanvas, degrees: number): PageCanvas {
+  const quarterTurn = degrees === -90 || degrees === 90
+  const rotated = createCanvas(quarterTurn ? canvas.height : canvas.width, quarterTurn ? canvas.width : canvas.height)
+  const ctx = context2d(rotated)
+  ctx.translate(rotated.width / 2, rotated.height / 2)
+  ctx.rotate(degrees * Math.PI / 180)
+  ctx.drawImage(canvas, -canvas.width / 2, -canvas.height / 2)
+  return rotated
+}
 
-  // Fill with padding color (white by default)
-  ctx.fillStyle = `rgb(${padColor}, ${padColor}, ${padColor})`;
-  ctx.fillRect(0, 0, targetWidth, targetHeight);
+export function extractRegion(source: PageCanvas, x: number, y: number, w: number, h: number): PageCanvas {
+  const region = createCanvas(w, h)
+  context2d(region).drawImage(source, x, y, w, h, 0, 0, w, h)
+  return region
+}
 
-  // Calculate scale to fit
-  const scale = Math.min(targetWidth / canvas.width, targetHeight / canvas.height);
-  const newWidth = Math.floor(canvas.width * scale);
-  const newHeight = Math.floor(canvas.height * scale);
+export function extractAndRotate(source: PageCanvas, x: number, y: number, w: number, h: number, degrees: number): PageCanvas {
+  return rotateCanvas(extractRegion(source, x, y, w, h), degrees)
+}
 
-  // Center the image
-  const x = Math.floor((targetWidth - newWidth) / 2);
-  const y = Math.floor((targetHeight - newHeight) / 2);
+export function resizeWithPadding(canvas: PageCanvas, padColor: number, targetWidth: number, targetHeight: number): PageCanvas {
+  const result = createCanvas(targetWidth, targetHeight)
+  const ctx = context2d(result)
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
+  ctx.fillStyle = `rgb(${padColor}, ${padColor}, ${padColor})`
+  ctx.fillRect(0, 0, targetWidth, targetHeight)
 
-  ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, x, y, newWidth, newHeight);
-
-  return result;
+  const scale = Math.min(targetWidth / canvas.width, targetHeight / canvas.height)
+  const newWidth = Math.floor(canvas.width * scale)
+  const newHeight = Math.floor(canvas.height * scale)
+  const x = Math.floor((targetWidth - newWidth) / 2)
+  const y = Math.floor((targetHeight - newHeight) / 2)
+  ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, x, y, newWidth, newHeight)
+  return result
 }

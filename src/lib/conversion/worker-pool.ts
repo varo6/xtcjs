@@ -1,24 +1,23 @@
+import type { ConvertedPage } from './render-page'
 import type { ConversionOptions } from './types'
 
-export interface WorkerProcessedPage {
-  name: string
-  xtg: ArrayBuffer
-  previewJpeg?: ArrayBuffer
-}
+/** An encoded image the worker decodes, or a page already rendered on the main thread. */
+export type WorkerPageImage = Blob | ImageBitmap
 
-interface WorkerResponse {
+export interface PageJob {
   jobId: number
-  pages?: WorkerProcessedPage[]
-  error?: string
-}
-
-interface QueueJob {
-  id: number
   pageNum: number
-  blob: Blob
+  image: WorkerPageImage
   options: ConversionOptions
   includePreview: boolean
-  resolve: (pages: WorkerProcessedPage[]) => void
+}
+
+export type PageJobResult =
+  | { jobId: number; pages: ConvertedPage[] }
+  | { jobId: number; error: string }
+
+interface QueueJob extends PageJob {
+  resolve: (pages: ConvertedPage[]) => void
   reject: (error: Error) => void
 }
 
@@ -45,20 +44,20 @@ export class ConvertWorkerPool {
       const worker = new Worker(new URL('../workers/convert-page.worker.ts', import.meta.url), { type: 'module' })
       const slot: WorkerSlot = { worker, busy: false }
 
-      worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
+      worker.onmessage = (event: MessageEvent<PageJobResult>) => {
         const message = event.data
         const job = slot.currentJob
-        if (!job || job.id !== message.jobId) {
+        if (!job || job.jobId !== message.jobId) {
           return
         }
 
         slot.busy = false
         slot.currentJob = undefined
 
-        if (message.error) {
+        if ('error' in message) {
           job.reject(new Error(message.error))
         } else {
-          job.resolve(message.pages || [])
+          job.resolve(message.pages)
         }
 
         this.pump()
@@ -81,19 +80,19 @@ export class ConvertWorkerPool {
 
   processPage(
     pageNum: number,
-    blob: Blob,
+    image: WorkerPageImage,
     options: ConversionOptions,
     includePreview: boolean
-  ): Promise<WorkerProcessedPage[]> {
+  ): Promise<ConvertedPage[]> {
     if (this.isDestroyed) {
       return Promise.reject(new Error('Worker pool is destroyed'))
     }
 
     return new Promise((resolve, reject) => {
       const job: QueueJob = {
-        id: this.nextJobId++,
+        jobId: this.nextJobId++,
         pageNum,
-        blob,
+        image,
         options,
         includePreview,
         resolve,
@@ -132,13 +131,8 @@ export class ConvertWorkerPool {
 
       slot.busy = true
       slot.currentJob = job
-      slot.worker.postMessage({
-        jobId: job.id,
-        pageNum: job.pageNum,
-        blob: job.blob,
-        options: job.options,
-        includePreview: job.includePreview
-      })
+      const { resolve, reject, ...message } = job
+      slot.worker.postMessage(message satisfies PageJob, job.image instanceof Blob ? [] : [job.image])
     }
   }
 }
