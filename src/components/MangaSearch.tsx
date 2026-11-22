@@ -71,7 +71,6 @@ export function MangaSearch({ open, onClose }: { open: boolean; onClose: () => v
     }
   }, [open])
 
-  // Debounce at 800ms, or search immediately on Enter
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     if (query.trim()) {

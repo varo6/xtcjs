@@ -1,9 +1,7 @@
-// IndexedDB storage for crash-resilient conversion results
-
 const DB_NAME = 'xtcjs-storage'
 const DB_VERSION = 1
 const STORE_NAME = 'conversions'
-const EXPIRATION_MS = 4.5 * 60 * 60 * 1000 // 4.5 hours
+export const EXPIRATION_MS = 4.5 * 60 * 60 * 1000
 
 export interface StoredConversion {
   id: string
@@ -24,9 +22,6 @@ export type StoredConversionRef = Omit<StoredConversion, 'data' | 'pageImages'>
 let dbInstance: IDBDatabase | null = null
 let dbError: Error | null = null
 
-/**
- * Initialize and open the IndexedDB database
- */
 export async function openDatabase(): Promise<IDBDatabase> {
   if (dbInstance) return dbInstance
   if (dbError) throw dbError
@@ -57,9 +52,6 @@ export async function openDatabase(): Promise<IDBDatabase> {
   })
 }
 
-/**
- * Check if IndexedDB is available
- */
 export function isStorageAvailable(): boolean {
   try {
     return typeof indexedDB !== 'undefined'
@@ -68,23 +60,14 @@ export function isStorageAvailable(): boolean {
   }
 }
 
-/**
- * Generate a unique session ID
- */
 export function generateSessionId(): string {
   return `session-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
 }
 
-/**
- * Generate a unique conversion ID
- */
 function generateId(): string {
   return `conv-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
 }
 
-/**
- * Store a conversion result in IndexedDB
- */
 export async function storeConversion(
   sessionId: string,
   conversion: {
@@ -120,16 +103,12 @@ export async function storeConversion(
 
     request.onerror = () => reject(new Error('Failed to store conversion'))
     request.onsuccess = () => {
-      // Return ref without large data
       const { data, pageImages, ...ref } = record
       resolve(ref)
     }
   })
 }
 
-/**
- * Get a full conversion record by ID
- */
 async function getConversion(id: string): Promise<StoredConversion | null> {
   const db = await openDatabase()
 
@@ -143,25 +122,16 @@ async function getConversion(id: string): Promise<StoredConversion | null> {
   })
 }
 
-/**
- * Get just the ArrayBuffer data for download
- */
 export async function getConversionData(id: string): Promise<ArrayBuffer | null> {
   const record = await getConversion(id)
   return record?.data || null
 }
 
-/**
- * Get just the preview images
- */
 export async function getConversionPreviews(id: string): Promise<string[] | null> {
   const record = await getConversion(id)
   return record?.pageImages || null
 }
 
-/**
- * Delete a conversion record
- */
 export async function deleteConversion(id: string): Promise<void> {
   const db = await openDatabase()
 
@@ -175,9 +145,6 @@ export async function deleteConversion(id: string): Promise<void> {
   })
 }
 
-/**
- * Delete multiple conversions
- */
 async function deleteConversions(ids: string[]): Promise<void> {
   const db = await openDatabase()
 
@@ -208,9 +175,6 @@ async function deleteConversions(ids: string[]): Promise<void> {
   })
 }
 
-/**
- * Get all unexpired conversion refs (without large data)
- */
 async function getAllConversionRefs(): Promise<StoredConversionRef[]> {
   const db = await openDatabase()
   const now = Date.now()
@@ -225,21 +189,16 @@ async function getAllConversionRefs(): Promise<StoredConversionRef[]> {
       const results: StoredConversionRef[] = []
       for (const record of request.result as StoredConversion[]) {
         if (record.expiresAt > now) {
-          // Return ref without large data
           const { data, pageImages, ...ref } = record
           results.push(ref)
         }
       }
-      // Sort by creation time, newest first
       results.sort((a, b) => b.createdAt - a.createdAt)
       resolve(results)
     }
   })
 }
 
-/**
- * Get conversions for a specific session
- */
 export async function getSessionConversionRefs(sessionId: string): Promise<StoredConversionRef[]> {
   const db = await openDatabase()
 
@@ -262,17 +221,11 @@ export async function getSessionConversionRefs(sessionId: string): Promise<Store
   })
 }
 
-/**
- * Delete all conversions in a session
- */
 export async function deleteSessionConversions(sessionId: string): Promise<void> {
   const refs = await getSessionConversionRefs(sessionId)
   await deleteConversions(refs.map(r => r.id))
 }
 
-/**
- * Clean up expired conversions
- */
 export async function cleanupExpiredConversions(): Promise<number> {
   const db = await openDatabase()
   const now = Date.now()
@@ -300,17 +253,11 @@ export async function cleanupExpiredConversions(): Promise<number> {
   })
 }
 
-/**
- * Get IDs of conversions from previous sessions (not in current session)
- */
 export async function getRecoveredConversionRefs(currentSessionId: string): Promise<StoredConversionRef[]> {
   const all = await getAllConversionRefs()
   return all.filter(r => r.sessionId !== currentSessionId)
 }
 
-/**
- * Clear all stored conversions
- */
 export async function clearAllConversions(): Promise<void> {
   const db = await openDatabase()
 

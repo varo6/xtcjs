@@ -1,4 +1,3 @@
-/** A stylized reading illustration, not a hardware product photograph. */
 export function StickyBanner() {
   return (
     <div className="sticky-banner" role="img"
