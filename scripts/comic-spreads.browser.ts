@@ -3,7 +3,7 @@
 import JSZip from 'jszip'
 import { convertToXtc, type ConversionOptions } from '../src/lib/converter'
 import { extractXtcPages, parseXtcFile } from '../src/lib/xtc-reader'
-import { getTargetDimensions } from '../src/lib/processing/canvas'
+import { getTargetDimensions } from '../src/lib/devices'
 
 function check(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message)

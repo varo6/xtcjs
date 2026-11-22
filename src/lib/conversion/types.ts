@@ -1,8 +1,10 @@
+import type { DeviceId } from '../devices'
+
 export type SplitMode = 'overlap' | 'split' | 'fourway' | 'nosplit'
 export type PageOverviewMode = 'none' | 'portrait' | 'landscape'
 
 export interface ConversionOptions {
-  device: 'X4' | 'X3' | 'Sticky'
+  device: DeviceId
   splitMode: SplitMode
   splitSpreads: boolean
   pageOverview: PageOverviewMode
