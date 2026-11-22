@@ -26,7 +26,7 @@ export function MangaSearch({ open, onClose }: { open: boolean; onClose: () => v
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   if (wasOpenRef.current !== open) {
     wasOpenRef.current = open

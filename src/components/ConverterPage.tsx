@@ -140,10 +140,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
   const pendingPreviewRef = useRef<string | undefined>(undefined)
   const progressTimerRef = useRef<number | null>(null)
   const lastProgressFlushRef = useRef(0)
-  const previewCacheRef = useRef<Map<string, string[]> | null>(null)
-  if (previewCacheRef.current === null) {
-    previewCacheRef.current = new Map()
-  }
+  const previewCacheRef = useRef(new Map<string, string[]>())
   const [options, setOptions] = useState<ConversionOptions>({
     device: 'X4',
     splitMode: (fileType === 'image' || fileType === 'video') ? 'nosplit' : 'overlap',

@@ -2,4 +2,4 @@
 
 export * from './types'
 export { extractPdfMetadata } from './pdf-outline'
-export { parseComicInfo, findComicInfoXml } from './comicinfo'
+export { parseComicInfo } from './comicinfo'

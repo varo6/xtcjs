@@ -133,8 +133,8 @@ function trimCanvasToContent(canvas: OffscreenCanvas): OffscreenCanvas {
 function resizeWithPadding(
   canvas: OffscreenCanvas,
   padColor = 255,
-  targetWidth = DEVICE_DIMENSIONS.X4.width,
-  targetHeight = DEVICE_DIMENSIONS.X4.height
+  targetWidth: number = DEVICE_DIMENSIONS.X4.width,
+  targetHeight: number = DEVICE_DIMENSIONS.X4.height
 ): OffscreenCanvas {
   const result = new OffscreenCanvas(targetWidth, targetHeight)
   const ctx = result.getContext('2d', { alpha: false })!

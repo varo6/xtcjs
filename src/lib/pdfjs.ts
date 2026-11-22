@@ -46,6 +46,13 @@ async function loadPdfWorker(): Promise<PdfWorkerConstructor> {
   return pdfWorkerPromise
 }
 
+// pdf.js v5 has no disableWorker option. With no workerPort it runs the worker
+// code on this thread only if globalThis.pdfjsWorker is set, which importing
+// the worker module does.
+async function loadMainThreadPdfWorker(): Promise<void> {
+  await import('pdfjs-dist/legacy/build/pdf.worker.min.mjs')
+}
+
 function disablePdfWorker(): void {
   if (sharedWorker) {
     sharedWorker.terminate()
@@ -55,6 +62,16 @@ function disablePdfWorker(): void {
     pdfJsModuleCache.GlobalWorkerOptions.workerPort = null
   }
   workerDisabled = true
+}
+
+// A worker that cannot run (blocked by CSP, failed to evaluate) does not throw
+// from its constructor; it only fires 'error'. pdf.js would wait on its port
+// forever, so wait for the "ready" message the pdf.js worker posts on startup.
+function waitForWorkerStart(worker: Worker): Promise<boolean> {
+  return new Promise((resolve) => {
+    worker.addEventListener('message', () => resolve(true), { once: true })
+    worker.addEventListener('error', () => resolve(false), { once: true })
+  })
 }
 
 async function ensurePdfWorker(pdfjsLib: PdfJsModule): Promise<boolean> {
@@ -69,6 +86,11 @@ async function ensurePdfWorker(pdfjsLib: PdfJsModule): Promise<boolean> {
   try {
     const PdfJsWorker = await loadPdfWorker()
     const worker = new PdfJsWorker()
+    if (!await waitForWorkerStart(worker)) {
+      worker.terminate()
+      disablePdfWorker()
+      return false
+    }
     worker.addEventListener('error', () => {
       if (sharedWorker === worker) {
         disablePdfWorker()
@@ -94,12 +116,13 @@ function isRecoverableWorkerError(error: unknown): boolean {
 export async function loadPdfDocument(data: PdfData) {
   const pdfjsLib = await loadPdfJsModule()
   const useWorker = await ensurePdfWorker(pdfjsLib)
-  const primaryBytes = clonePdfBytes(data)
+  if (!useWorker) {
+    await loadMainThreadPdfWorker()
+  }
 
   try {
     return await pdfjsLib.getDocument({
-      data: primaryBytes,
-      disableWorker: !useWorker,
+      data: clonePdfBytes(data),
       wasmUrl: PDFJS_WASM_URL,
     }).promise
   } catch (error) {
@@ -108,10 +131,10 @@ export async function loadPdfDocument(data: PdfData) {
     }
 
     disablePdfWorker()
+    await loadMainThreadPdfWorker()
 
     return await pdfjsLib.getDocument({
       data: clonePdfBytes(data),
-      disableWorker: true,
       wasmUrl: PDFJS_WASM_URL,
     }).promise
   }
