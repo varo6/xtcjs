@@ -10,6 +10,7 @@
     "test": "bun test",
     "typecheck": "tsc --noEmit -p .",
     "check": "bun run typecheck && bun test",
+    "verify:scheduler": "bun test src/lib/conversion/schedule-pages",
     "build:static": "VITE_API_URL=https://api.xtcjs.app/api vite build",
     "preview": "vite preview",
     "serve": "bun run server/index.ts",
