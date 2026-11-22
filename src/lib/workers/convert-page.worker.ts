@@ -2,6 +2,7 @@ import { applyDithering } from '../processing/dithering'
 import { applyContrast, calculateFourWaySegments, calculateSpreadSegments, calculateOverlapSegments, findContentBounds, shouldSplitPage, toGrayscale } from '../processing/image'
 import { imageDataToXtg, imageDataToXth } from '../processing/xtg'
 import type { ConversionOptions } from '../conversion/types'
+import { getTargetDimensions } from '../devices'
 
 interface CropRect {
   x: number
@@ -33,18 +34,9 @@ interface WorkerResponse {
 const PREVIEW_WIDTH = 240
 const PREVIEW_HEIGHT = 400
 const PREVIEW_JPEG_QUALITY = 0.55
-const DEVICE_DIMENSIONS = {
-  X4: { width: 480, height: 800 },
-  X3: { width: 528, height: 792 },
-  Sticky: { width: 480, height: 800 }
-} as const
 
 function getPageName(pageNum: number, suffix: string): string {
   return `${String(pageNum).padStart(4, '0')}_${suffix}.png`
-}
-
-function getTargetDimensions(options: ConversionOptions): { width: number; height: number } {
-  return DEVICE_DIMENSIONS[options.device] ?? DEVICE_DIMENSIONS.X4
 }
 
 function clampMarginPercent(value: number): number {
@@ -132,9 +124,9 @@ function trimCanvasToContent(canvas: OffscreenCanvas): OffscreenCanvas {
 
 function resizeWithPadding(
   canvas: OffscreenCanvas,
-  padColor = 255,
-  targetWidth: number = DEVICE_DIMENSIONS.X4.width,
-  targetHeight: number = DEVICE_DIMENSIONS.X4.height
+  padColor: number,
+  targetWidth: number,
+  targetHeight: number
 ): OffscreenCanvas {
   const result = new OffscreenCanvas(targetWidth, targetHeight)
   const ctx = result.getContext('2d', { alpha: false })!
@@ -222,7 +214,7 @@ async function processBitmap(
   options: ConversionOptions,
   includePreview: boolean
 ): Promise<WorkerPageResult[]> {
-  const { width: targetWidth, height: targetHeight } = getTargetDimensions(options)
+  const { width: targetWidth, height: targetHeight } = getTargetDimensions(options.device)
   const results: WorkerPageResult[] = []
   const crop = getAxisCropRect(source.width, source.height, options)
 
