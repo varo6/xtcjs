@@ -627,7 +627,7 @@ export function MergePage() {
       )}
 
       {/* Error-only results */}
-      {results.length > 0 && results.every(r => r.error) && (
+      {results.length > 0 && results.every((r): r is MergePageResult & { error: string } => Boolean(r.error)) && (
         <section className="results-section">
           <div className="section-header">
             <h2>Error</h2>
