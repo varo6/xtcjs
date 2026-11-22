@@ -140,7 +140,7 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
                 type="checkbox"
                 id="coverPortrait"
                 checked={options.coverPortrait}
-                disabled={fileType === 'cbz' && options.firstPageIsCover === false}
+                disabled={options.firstPageIsCover === false}
                 onChange={(e) => onChange({ ...options, coverPortrait: e.target.checked })}
               />
               <span>Keep cover portrait</span>
@@ -281,7 +281,7 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
               <h2>Advanced</h2>
             </div>
 
-            {fileType === 'cbz' && (
+            {(fileType === 'cbz' || fileType === 'pdf') && (
               <div className="option option-checkbox">
                 <label htmlFor="firstPageIsCover" className="checkbox-label">
                   <input
@@ -294,7 +294,25 @@ export function Options({ options, onChange, fileType = 'cbz' }: OptionsProps) {
                   <span>Treat first page as cover</span>
                 </label>
                 <InfoNote id="first-page-cover-note">
-                  Turn off for chapters without a cover. The first page will use your normal orientation and page split.
+                  Turn off when the first page is content. It will use your normal orientation and page split.
+                </InfoNote>
+              </div>
+            )}
+
+            {fileType === 'pdf' && options.orientation === 'landscape' && options.splitMode === 'overlap' && (
+              <div className="option option-checkbox">
+                <label htmlFor="avoidTextCuts" className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    id="avoidTextCuts"
+                    checked={options.avoidTextCuts === true}
+                    aria-describedby="avoid-text-cuts-note"
+                    onChange={(e) => onChange({ ...options, avoidTextCuts: e.target.checked })}
+                  />
+                  <span>Avoid cutting text lines</span>
+                </label>
+                <InfoNote id="avoid-text-cuts-note">
+                  Looks for nearby gaps between text lines; no OCR. Keeps normal overlap if no safe gap is found.
                 </InfoNote>
               </div>
             )}

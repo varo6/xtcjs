@@ -63,6 +63,7 @@ export async function checkComicSpreads() {
     { name: 'Sticky', options: { device: 'Sticky' }, count: 13, perSpread: 6 },
     { name: 'XTCH', options: { is2bit: true }, count: 13, perSpread: 6 },
     { name: 'margins', options: { horizontalMargin: 1, verticalMargin: 2 }, count: 13, perSpread: 6 },
+    { name: 'ignore PDF text setting', options: { avoidTextCuts: true }, count: 13, perSpread: 6 },
     { name: 'chapter thirds', options: { firstPageIsCover: false }, count: 18, perSpread: 6 },
     { name: 'chapter halves', options: { firstPageIsCover: false, splitMode: 'split' }, count: 12, perSpread: 4 },
     { name: 'chapter XTCH', options: { firstPageIsCover: false, is2bit: true }, count: 18, perSpread: 6 },

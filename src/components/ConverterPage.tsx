@@ -25,6 +25,11 @@ interface FileSelectionState {
   transferNotice: string | null
 }
 
+interface ViewerState {
+  pages: string[]
+  totalPages?: number
+}
+
 const MAX_FALLBACK_PREVIEW_PAGES = 200
 const PROGRESS_UPDATE_INTERVAL_MS = 120
 
@@ -134,7 +139,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
   const [isDownloadAllLoading, setIsDownloadAllLoading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
-  const [viewerPages, setViewerPages] = useState<string[]>([])
+  const [viewer, setViewer] = useState<ViewerState>({ pages: [] })
   const progressPreviewRef = useRef<string | null>(null)
   const pendingProgressRef = useRef<number | null>(null)
   const pendingPreviewRef = useRef<string | undefined>(undefined)
@@ -153,6 +158,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     verticalMargin: 0,
     orientation: (fileType === 'image' || fileType === 'video') ? 'portrait' : 'landscape',
     firstPageIsCover: true,
+    avoidTextCuts: false,
     coverPortrait: false,
     landscapeFlipClockwise: false,
     showProgressPreview: true,
@@ -313,14 +319,14 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
       const previewCache = previewCacheRef.current
       const cached = previewCache.get(result.id)
       if (cached && cached.length > 0) {
-        setViewerPages(cached)
+        setViewer({ pages: cached, totalPages: result.pageCount })
         return
       }
 
       const images = await getPreviewImages(result)
       if (images.length > 0) {
         previewCache.set(result.id, images)
-        setViewerPages(images)
+        setViewer({ pages: images, totalPages: result.pageCount })
         return
       }
 
@@ -336,7 +342,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
       const canvases = await extractXtcPages(data, decodeLimit)
       const decodedImages = canvases.map((canvas) => canvas.toDataURL('image/png'))
       previewCache.set(result.id, decodedImages)
-      setViewerPages(decodedImages)
+      setViewer({ pages: decodedImages, totalPages: result.pageCount })
     } catch (err) {
       console.error('Preview failed:', err)
       setPreviewError(
@@ -346,7 +352,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
   }, [getPreviewImages, getResultData])
 
   const handleCloseViewer = useCallback(() => {
-    setViewerPages([])
+    setViewer({ pages: [] })
   }, [])
 
   const handleDownload = useCallback(async (result: StoredResult) => {
@@ -504,7 +510,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
         onClear={results.length > 0 ? handleClearResults : undefined}
       />
 
-      <Viewer pages={viewerPages} onClose={handleCloseViewer} />
+      <Viewer pages={viewer.pages} totalPages={viewer.totalPages} onClose={handleCloseViewer} />
     </>
   )
 }

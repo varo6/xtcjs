@@ -1,4 +1,5 @@
-import { expect, test } from 'bun:test'
+import { expect, spyOn, test } from 'bun:test'
+import * as React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { ConversionOptions } from '../lib/converter'
 import { normalizeSplitModeForOrientation, Options, TARGET_DEVICES } from './Options'
@@ -19,7 +20,9 @@ function renderPdfOptions(
   orientation: ConversionOptions['orientation'],
   device: ConversionOptions['device'] = 'X4',
   firstPageIsCover = true,
-  fileType: 'cbz' | 'pdf' = 'pdf'
+  fileType: 'cbz' | 'pdf' | 'image' | 'video' = 'pdf',
+  overrides: Partial<ConversionOptions> = {},
+  advanced = false
 ) {
   const options: ConversionOptions = {
     device,
@@ -38,23 +41,83 @@ function renderPdfOptions(
     showProgressPreview: false,
     imageMode: 'letterbox',
     videoFps: 1,
+    ...overrides,
   }
 
-  return renderToStaticMarkup(<Options options={options} onChange={() => {}} fileType={fileType} />)
+  // SSR cannot click the advanced toggle; start its local state expanded instead.
+  const state = advanced ? spyOn(React, 'useState').mockReturnValueOnce([true, () => {}]) : undefined
+  try {
+    return renderToStaticMarkup(<Options options={options} onChange={() => {}} fileType={fileType} />)
+  } finally {
+    state?.mockRestore()
+  }
 }
 
-test('disables cover orientation when manga cover handling is off', () => {
-  const markup = renderPdfOptions('landscape', 'X4', false, 'cbz')
-  expect(markup.match(/<input[^>]*id="coverPortrait"[^>]*>/)?.[0]).toContain('disabled')
+test('disables cover orientation when PDF or manga cover handling is off', () => {
+  for (const fileType of ['cbz', 'pdf'] as const) {
+    const markup = renderPdfOptions('landscape', 'X4', false, fileType)
+    expect(markup.match(/<input[^>]*id="coverPortrait"[^>]*>/)?.[0]).toContain('disabled')
+  }
 })
 
 test('keeps cover orientation available for manga covers and PDFs', () => {
   for (const markup of [
     renderPdfOptions('landscape', 'X4', true, 'cbz'),
-    renderPdfOptions('landscape', 'X4', false, 'pdf'),
+    renderPdfOptions('landscape', 'X4', true, 'pdf'),
   ]) {
     expect(markup.match(/<input[^>]*id="coverPortrait"[^>]*>/)?.[0]).not.toContain('disabled')
   }
+})
+
+test('offers first-page cover handling on by default in PDF and CBZ advanced settings', () => {
+  for (const fileType of ['pdf', 'cbz'] as const) {
+    const markup = renderPdfOptions('landscape', 'X4', true, fileType, {}, true)
+    expect(markup.match(/<input[^>]*id="firstPageIsCover"[^>]*>/)?.[0]).toContain('checked')
+    expect(markup).toContain('aria-describedby="first-page-cover-note"')
+    expect(markup).toContain('id="first-page-cover-note"')
+    expect(markup).toContain('first page is content')
+  }
+})
+
+test('renders disabled cover handling as unchecked in PDF advanced settings', () => {
+  const markup = renderPdfOptions('landscape', 'X4', false, 'pdf', {}, true)
+  const checkbox = markup.match(/<input[^>]*id="firstPageIsCover"[^>]*>/)?.[0]
+  expect(checkbox).toBeDefined()
+  expect(checkbox).not.toContain('checked')
+})
+
+test('offers optional text-cut avoidance only in landscape overlapping PDF advanced settings', () => {
+  const markup = renderPdfOptions('landscape', 'X4', true, 'pdf', { splitMode: 'overlap' }, true)
+  const checkbox = markup.match(/<input[^>]*id="avoidTextCuts"[^>]*>/)?.[0]
+  expect(checkbox).toBeDefined()
+  expect(checkbox).not.toContain('checked')
+  expect(checkbox).toContain('aria-describedby="avoid-text-cuts-note"')
+  expect(markup).toContain('Avoid cutting text lines')
+  expect(markup).toContain('id="avoid-text-cuts-note"')
+  expect(markup).toContain('nearby gaps between text lines; no OCR')
+  expect(markup).toContain('Keeps normal overlap if no safe gap is found')
+})
+
+test('reflects enabled text-cut avoidance in the PDF checkbox', () => {
+  const markup = renderPdfOptions('landscape', 'X4', true, 'pdf', {
+    splitMode: 'overlap', avoidTextCuts: true,
+  }, true)
+  expect(markup.match(/<input[^>]*id="avoidTextCuts"[^>]*>/)?.[0]).toContain('checked')
+})
+
+test('hides text-cut avoidance outside PDF landscape overlap or collapsed advanced settings', () => {
+  for (const fileType of ['cbz', 'image', 'video'] as const) {
+    expect(renderPdfOptions('landscape', 'X4', true, fileType, { splitMode: 'overlap' }, true))
+      .not.toContain('id="avoidTextCuts"')
+  }
+  for (const splitMode of ['nosplit', 'split', 'fourway'] as const) {
+    expect(renderPdfOptions('landscape', 'X4', true, 'pdf', { splitMode }, true))
+      .not.toContain('id="avoidTextCuts"')
+  }
+  expect(renderPdfOptions('portrait', 'X4', true, 'pdf', { splitMode: 'overlap' }, true))
+    .not.toContain('id="avoidTextCuts"')
+  expect(renderPdfOptions('landscape', 'X4', true, 'pdf', { splitMode: 'overlap' }))
+    .not.toContain('id="avoidTextCuts"')
 })
 
 test('offers two-column paper splitting only in portrait PDF mode', () => {

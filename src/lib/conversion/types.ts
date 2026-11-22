@@ -5,6 +5,7 @@ export interface ConversionOptions {
   device: 'X4' | 'X3' | 'Sticky'
   splitMode: SplitMode
   splitSpreads: boolean
+  avoidTextCuts?: boolean
   pageOverview: PageOverviewMode
   dithering: string
   is2bit: boolean
