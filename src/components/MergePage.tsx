@@ -48,24 +48,20 @@ export function MergePage() {
   const [viewerPages, setViewerPages] = useState<string[]>([])
   const [typeError, setTypeError] = useState<string | null>(null)
 
-  // Split options
   const [splitMethod, setSplitMethod] = useState<SplitMethod>('ranges')
   const [rangesInput, setRangesInput] = useState('')
   const [partsCount, setPartsCount] = useState(2)
   const [totalPages, setTotalPages] = useState<number | null>(null)
 
-  // Output format: keep same type for CBZ/PDF, allow choice for XTC
   const [xtcOutputFormat, setXtcOutputFormat] = useState<OutputFormat>('xtc')
   
-  // Determine actual output format based on input type
   const actualOutputFormat: OutputFormat = useMemo(() => {
     if (!detectedType) return 'cbz'
     if (detectedType === 'xtc') return xtcOutputFormat
     if (detectedType === 'pdf') return 'pdf'
-    return 'cbz' // CBZ input stays as CBZ
+    return 'cbz'
   }, [detectedType, xtcOutputFormat])
 
-  // Calculate expected output count for split
   const expectedOutputCount = useMemo(() => {
     if (mode !== 'split' || totalPages === null) return 0
 
@@ -83,7 +79,6 @@ export function MergePage() {
 
   const handleFiles = useCallback(async (newFiles: File[]) => {
     if (mode === 'split') {
-      // Split mode: only accept one file
       const file = newFiles[0]
       if (!file) return
 
@@ -98,7 +93,6 @@ export function MergePage() {
       setTypeError(null)
       setResults([])
 
-      // Get page count for split
       try {
         const count = await getPageCount(file)
         setTotalPages(count)
@@ -106,7 +100,6 @@ export function MergePage() {
         setTypeError(err instanceof Error ? err.message : 'Failed to read file')
       }
     } else {
-      // Merge mode: accept multiple files of same type
       const allFiles = [...files, ...newFiles]
       const validation = validateSameType(allFiles)
 
@@ -181,7 +174,6 @@ export function MergePage() {
 
         setResults([{ ...result, selected: true }])
       } else {
-        // Split mode
         const file = files[0]
         let ranges: PageRange[]
 
@@ -274,7 +266,6 @@ export function MergePage() {
 
   return (
     <>
-      {/* Mode Toggle */}
       <section className="mode-toggle">
         <button
           type="button"
@@ -292,7 +283,6 @@ export function MergePage() {
         </button>
       </section>
 
-      {/* Dropzone */}
       <section className="dropzone-wrapper">
         <button
           type="button"
@@ -336,14 +326,12 @@ export function MergePage() {
         />
       </section>
 
-      {/* Type Error */}
       {typeError && (
         <div className="type-error">
           <p>{typeError}</p>
         </div>
       )}
 
-      {/* File List */}
       {files.length > 0 && (
         <section className="file-list">
           <div className="section-header">
@@ -370,7 +358,6 @@ export function MergePage() {
             ))}
           </div>
 
-          {/* Page info for split mode */}
           {mode === 'split' && totalPages !== null && (
             <div className="page-info">
               Total pages: <strong>{totalPages}</strong>
@@ -379,14 +366,12 @@ export function MergePage() {
         </section>
       )}
 
-      {/* Options Panel */}
       {files.length > 0 && (
         <aside className="options-panel">
           <div className="section-header">
             <h2>Options</h2>
           </div>
 
-          {/* Output format - only for XTC input */}
           {detectedType === 'xtc' && (
             <div className="option">
               <label htmlFor="outputFormat">Output Format</label>
@@ -401,7 +386,6 @@ export function MergePage() {
             </div>
           )}
 
-          {/* Show output info for CBZ */}
           {detectedType === 'cbz' && (
             <div className="option">
               <span className="option-label">Output Format</span>
@@ -414,7 +398,6 @@ export function MergePage() {
             </div>
           )}
 
-          {/* Show output info for PDF */}
           {detectedType === 'pdf' && (
             <div className="option">
               <span className="option-label">Output Format</span>
@@ -469,7 +452,6 @@ export function MergePage() {
                 </div>
               )}
 
-              {/* Output count preview */}
               {expectedOutputCount > 0 && (
                 <div className="output-preview">
                   Will create <strong>{expectedOutputCount}</strong> {actualOutputFormat.toUpperCase()} file{expectedOutputCount !== 1 ? 's' : ''}
@@ -478,7 +460,6 @@ export function MergePage() {
             </>
           )}
 
-          {/* Merge output preview */}
           {mode === 'merge' && files.length >= 2 && (
             <div className="output-preview">
               Will create <strong>1</strong> {actualOutputFormat.toUpperCase()} file
@@ -487,7 +468,6 @@ export function MergePage() {
         </aside>
       )}
 
-      {/* Process Button */}
       {files.length > 0 && (
         <section className="action-section">
           <button
@@ -507,7 +487,6 @@ export function MergePage() {
         </section>
       )}
 
-      {/* Progress */}
       {isProcessing && (
         <section className="progress-section">
           <div className="progress-header">
@@ -528,7 +507,6 @@ export function MergePage() {
         </section>
       )}
 
-      {/* Results */}
       {results.length > 0 && !results.every(r => r.error) && (
         <section className="results-section">
           <div className="section-header">
@@ -590,7 +568,6 @@ export function MergePage() {
             ))}
           </div>
 
-          {/* Action buttons */}
           <div className="results-actions">
             {results.length > 1 && !results.some(r => r.error) && (
               <button
@@ -626,7 +603,6 @@ export function MergePage() {
         </section>
       )}
 
-      {/* Error-only results */}
       {results.length > 0 && results.every((r): r is MergePageResult & { error: string } => Boolean(r.error)) && (
         <section className="results-section">
           <div className="section-header">
@@ -644,7 +620,6 @@ export function MergePage() {
         </section>
       )}
 
-      {/* Viewer */}
       <Viewer pages={viewerPages} onClose={() => setViewerPages([])} />
     </>
   )

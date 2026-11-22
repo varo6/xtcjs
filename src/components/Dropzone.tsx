@@ -44,7 +44,6 @@ export function Dropzone({ onFiles, fileType = 'cbz', multiple = true }: Dropzon
         /\.(xtc|xtch)$/i.test(f.name)
       )
     }
-    // Accept both .cbz and .cbr for comic book type
     return Array.from(files).filter(f => {
       const name = f.name.toLowerCase()
       return name.endsWith('.cbz') || name.endsWith('.cbr')

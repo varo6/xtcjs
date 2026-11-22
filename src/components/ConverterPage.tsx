@@ -73,7 +73,6 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     transferNotice: null,
   })
 
-  // Use IndexedDB-backed storage for results
   const {
     results,
     recoveredResults,
@@ -88,12 +87,10 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     getResultData,
   } = useStoredResults()
 
-  // Check for transferred files on mount
   useEffect(() => {
     let noticeTimer: ReturnType<typeof setTimeout> | null = null
     const pending = consumePendingFiles()
     if (pending.length > 0) {
-      // Filter files matching this converter's type
       const matchingFiles = pending.filter(f => {
         const name = f.name.toLowerCase()
         if (fileType === 'pdf') {
@@ -105,7 +102,6 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
         if (fileType === 'video') {
           return /\.(mp4|webm|mkv|avi|mov)$/i.test(name)
         }
-        // Accept both .cbz and .cbr for comic book type
         return name.endsWith('.cbz') || name.endsWith('.cbr')
       })
       if (matchingFiles.length > 0) {
@@ -114,7 +110,6 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
           selectedFiles: matchingFiles,
           transferNotice: message,
         })
-        // Clear notice after 5 seconds
         noticeTimer = setTimeout(() => {
           setFileSelection((prev) => ({ ...prev, transferNotice: null }))
         }, 5000)
@@ -235,7 +230,7 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     if (selectedFiles.length === 0) return
 
     setIsConverting(true)
-    await clearSession() // Clear previous session results
+    await clearSession()
     setPreviewError(null)
     setProgress(0)
     setProgressText('Processing...')
@@ -252,7 +247,6 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
       setProgress(i / selectedFiles.length)
 
       try {
-        // Determine actual file type (cbz vs cbr vs image vs video)
         let actualFileType: 'cbz' | 'cbr' | 'pdf' | 'image' | 'video' = fileType
         if (file.name.toLowerCase().endsWith('.cbr')) {
           actualFileType = 'cbr'
@@ -269,14 +263,12 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
           scheduleProgressUiFlush(pageProgress >= 0.999)
         })
 
-        // Store result immediately - progressive display
         await addResult(result)
 
         recordConversion(fileType === 'image' || fileType === 'video' ? 'cbz' : fileType).catch(() => {})
       } catch (err) {
         console.error(`Error converting ${file.name}:`, err)
         const fallbackExtension = options.is2bit ? '.xtch' : '.xtc'
-        // Store error result
         await addResult({
           name: file.name.replace(/\.[^/.]+$/i, fallbackExtension),
           error: normalizeUserErrorMessage(err instanceof Error ? err.message : 'Unknown error'),
@@ -435,7 +427,6 @@ export function ConverterPage({ fileType, notice }: ConverterPageProps) {
     }
   }, [clearProgressTimer, revokeProgressPreview])
 
-  // Combine current and recovered results for display
   const allResults = [...recoveredResults, ...results]
   const downloadableCount = allResults.filter(result => !result.error).length
 
