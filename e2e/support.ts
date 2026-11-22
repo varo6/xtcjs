@@ -68,6 +68,45 @@ export async function makeCbz(pages: Buffer[], comicInfo: string | null = SPREAD
   return { name, type: 'cbz', bytes: await zip.generateAsync({ type: 'uint8array' }) }
 }
 
+function rarBlock(type: number, flags: number, fields: Buffer): Buffer {
+  const body = Buffer.concat([Buffer.from([type]), u16(flags), u16(7 + fields.length), fields])
+  return Buffer.concat([u16(crc32(body) & 0xffff), body])
+}
+
+function u16(value: number): Buffer {
+  const out = Buffer.alloc(2)
+  out.writeUInt16LE(value)
+  return out
+}
+
+function u32(value: number): Buffer {
+  const out = Buffer.alloc(4)
+  out.writeUInt32LE(value >>> 0)
+  return out
+}
+
+// RAR 1.5-4.x with the "store" method (0x30), the only variant writable without the proprietary rar tool.
+export function makeCbr(pages: Buffer[], comicInfo: string | null = SPREAD_COMIC_INFO, name = 'fixture.cbr'): Source {
+  const entries: Array<[string, Buffer]> = pages.map((page, i) => [`${String(i + 1).padStart(3, '0')}.png`, page])
+  if (comicInfo) entries.push(['ComicInfo.xml', Buffer.from(comicInfo)])
+  const LONG_BLOCK = 0x8000
+  const files = entries.map(([path, data]) => {
+    const fileName = Buffer.from(path)
+    const fields = Buffer.concat([
+      u32(data.length), u32(data.length), Buffer.from([0]), u32(crc32(data)), u32(0x00210000),
+      Buffer.from([20, 0x30]), u16(fileName.length), u32(0x20), fileName,
+    ])
+    return Buffer.concat([rarBlock(0x74, LONG_BLOCK, fields), data])
+  })
+  const bytes = Buffer.concat([
+    Buffer.from([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x00]),
+    rarBlock(0x73, 0, Buffer.alloc(6)),
+    ...files,
+    rarBlock(0x7b, 0x4000, Buffer.alloc(0)),
+  ])
+  return { name, type: 'cbr', bytes: new Uint8Array(bytes) }
+}
+
 export async function makePdf(pages: Buffer[], name = 'fixture.pdf'): Promise<Source> {
   const pdf = await PDFDocument.create()
   for (const png of pages) {

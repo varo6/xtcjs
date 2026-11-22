@@ -3,11 +3,12 @@
  *
  * Every await the scheduler makes on the outside world (`load`, a worker job,
  * a main-thread conversion) returns a promise this harness settles by hand. Each
- * run drains all microtasks, then picks one pending settlement: load finishes,
- * worker job succeeds, worker job fails, or main-thread conversion finishes. A
- * depth-first search replays the scheduler from scratch for every sequence of
- * choices, so every settlement order and every subset of failing worker jobs is
- * explored within the bounds.
+ * run drains all microtasks, then picks one pending settlement: load finishes
+ * or rejects, worker job succeeds or fails, or main-thread conversion finishes or
+ * rejects. A depth-first search replays the scheduler from scratch for every
+ * sequence of choices, so every settlement order, every subset of failing worker
+ * jobs and every placement of up to `rejections` rejected loads or main-thread
+ * conversions is explored within the bounds.
  */
 import { ConvertWorkerPool } from './worker-pool'
 import type { schedulePages } from './schedule-pages'
@@ -19,6 +20,8 @@ export interface Bounds {
   pages: number
   /** 0 runs without a worker pool. */
   workers: number
+  /** How many loads or main-thread conversions may reject in one run. Defaults to 0. */
+  rejections?: number
 }
 
 export interface Property {
@@ -37,11 +40,11 @@ interface ConvertedPage {
   index: number
 }
 
-type Outcome = 'resolve' | 'succeed' | 'fail'
+type Outcome = 'resolve' | 'reject' | 'succeed' | 'fail'
 
 interface PendingSettlement {
   label: (outcome: Outcome) => string
-  outcomes: Outcome[]
+  outcomes: () => Outcome[]
   enabled: () => boolean
   settle: (outcome: Outcome) => void
 }
@@ -59,6 +62,11 @@ export interface RunState {
   startedAfterFallbackInFlight: Set<number>
   workers: FakeWorker[]
   pending: PendingSettlement[]
+  rejectionsLeft: number
+  injectedRejection: boolean
+  /** Calls the scheduler made after `schedulePages` settled. */
+  startedAfterSettle: string[]
+  workersAliveAtSettle: number
   outcome: { kind: 'running' } | { kind: 'resolved'; results: ConvertedPage[] } | { kind: 'rejected'; error: unknown }
 }
 
@@ -78,7 +86,7 @@ class FakeWorker {
     run.trace.push(`page ${pageNum} is sent to a worker`)
     run.pending.push({
       label: (outcome) => outcome === 'succeed' ? `the worker converts page ${pageNum}` : `the worker fails on page ${pageNum}`,
-      outcomes: ['succeed', 'fail'],
+      outcomes: () => ['succeed', 'fail'],
       enabled: () => !this.terminated,
       settle: (outcome) => {
         this.onmessage!({
@@ -97,13 +105,14 @@ class FakeWorker {
 
 function deferred<T>() {
   let resolve!: (value: T) => void
-  const promise = new Promise<T>((r) => { resolve = r })
-  return { promise, resolve }
+  let reject!: (error: Error) => void
+  const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej })
+  return { promise, resolve, reject }
 }
 
 const drainMicrotasks = () => new Promise<void>((resolve) => setImmediate(resolve))
 
-function startRun(scheduler: Scheduler, { pages, workers }: Bounds): RunState {
+function startRun(scheduler: Scheduler, { pages, workers, rejections = 0 }: Bounds): RunState {
   const run: RunState = {
     totalPages: pages,
     trace: [],
@@ -116,9 +125,28 @@ function startRun(scheduler: Scheduler, { pages, workers }: Bounds): RunState {
     startedAfterFallbackInFlight: new Set(),
     workers: [],
     pending: [],
+    rejectionsLeft: rejections,
+    injectedRejection: false,
+    startedAfterSettle: [],
+    workersAliveAtSettle: 0,
     outcome: { kind: 'running' },
   }
   currentRun = run
+
+  const started = (call: string) => {
+    if (run.outcome.kind !== 'running') run.startedAfterSettle.push(call)
+  }
+  const canReject = (): Outcome[] => run.rejectionsLeft > 0 ? ['resolve', 'reject'] : ['resolve']
+  const injectRejection = (index: number) => {
+    run.rejectionsLeft--
+    run.injectedRejection = true
+    run.startedAfterFallbackInFlight.delete(index)
+  }
+  const settled = (outcome: RunState['outcome'], description: string) => {
+    run.outcome = outcome
+    run.workersAliveAtSettle = run.workers.filter((worker) => !worker.terminated).length
+    run.trace.push(description)
+  }
 
   const pool = workers > 0 ? new ConvertWorkerPool(workers) : null
   const noOptions = {} as ConversionOptions
@@ -128,6 +156,7 @@ function startRun(scheduler: Scheduler, { pages, workers }: Bounds): RunState {
     workers: pool && {
       slotCount: workers,
       convert: async ({ index }) => {
+        started(`page ${index + 1} is handed to the worker pool`)
         await pool.processPage(index + 1, new Blob(), noOptions, false)
         run.conversions[index]++
         return { index }
@@ -143,28 +172,38 @@ function startRun(scheduler: Scheduler, { pages, workers }: Bounds): RunState {
       },
     },
     load: (index) => {
+      started(`page ${index + 1} starts loading`)
       run.loads[index]++
       if (run.fallbackTriggered) run.startedAfterFallbackInFlight.add(index)
       run.trace.push(`page ${index + 1} starts loading`)
-      const { promise, resolve } = deferred<LoadedPage>()
+      const { promise, resolve, reject } = deferred<LoadedPage>()
       run.pending.push({
-        label: () => `page ${index + 1} finishes loading`,
-        outcomes: ['resolve'],
+        label: (outcome) => outcome === 'resolve' ? `page ${index + 1} finishes loading` : `page ${index + 1} fails to load`,
+        outcomes: canReject,
         enabled: () => true,
-        settle: () => resolve({ index }),
+        settle: (outcome) => {
+          if (outcome === 'resolve') return resolve({ index })
+          injectRejection(index)
+          reject(new Error(`page ${index + 1} failed to load`))
+        },
       })
       return promise
     },
     convertOnMainThread: ({ index }) => {
+      started(`page ${index + 1} starts converting on the main thread`)
       run.mainThreadInFlight.add(index)
       run.trace.push(`page ${index + 1} starts converting on the main thread`)
-      const { promise, resolve } = deferred<ConvertedPage>()
+      const { promise, resolve, reject } = deferred<ConvertedPage>()
       run.pending.push({
-        label: () => `the main thread finishes page ${index + 1}`,
-        outcomes: ['resolve'],
+        label: (outcome) => outcome === 'resolve' ? `the main thread finishes page ${index + 1}` : `the main thread fails on page ${index + 1}`,
+        outcomes: canReject,
         enabled: () => true,
-        settle: () => {
+        settle: (outcome) => {
           run.mainThreadInFlight.delete(index)
+          if (outcome === 'reject') {
+            injectRejection(index)
+            return reject(new Error(`the main thread failed on page ${index + 1}`))
+          }
           run.conversions[index]++
           resolve({ index })
         },
@@ -172,12 +211,13 @@ function startRun(scheduler: Scheduler, { pages, workers }: Bounds): RunState {
       return promise
     },
     onPageDone: ({ index }) => {
+      started(`page ${index + 1} is reported done`)
       run.pagesDone[index]++
       run.startedAfterFallbackInFlight.delete(index)
     },
   }).then(
-    (results) => { run.outcome = { kind: 'resolved', results } },
-    (error) => { run.outcome = { kind: 'rejected', error } },
+    (results) => settled({ kind: 'resolved', results }, 'schedulePages resolves'),
+    (error) => settled({ kind: 'rejected', error }, `schedulePages rejects: ${String(error)}`),
   )
 
   return run
@@ -252,7 +292,7 @@ async function replay(
     }
 
     run.pending = run.pending.filter((settlement) => settlement.enabled())
-    const actions = run.pending.flatMap((settlement) => settlement.outcomes.map((outcome) => ({ settlement, outcome })))
+    const actions = run.pending.flatMap((settlement) => settlement.outcomes().map((outcome) => ({ settlement, outcome })))
     if (actions.length === 0) {
       for (const property of properties) {
         const message = property.atEnd?.(run)
@@ -310,7 +350,7 @@ export const FINISHES_AND_DESTROYS_POOL: Property = {
   name: 'Conversion always finishes and the worker pool is destroyed',
   atEnd: (run) => {
     if (run.outcome.kind === 'running') return 'nothing left to settle but schedulePages never returned'
-    if (run.outcome.kind === 'rejected') return `schedulePages rejected: ${String(run.outcome.error)}`
+    if (run.outcome.kind === 'rejected' && !run.injectedRejection) return `schedulePages rejected: ${String(run.outcome.error)}`
     const alive = run.workers.filter((worker) => !worker.terminated).length
     if (alive > 0) return `${alive} workers still alive after conversion`
     return null
@@ -330,5 +370,15 @@ export const ONE_MAIN_THREAD_PAGE_AT_A_TIME: Property = {
   always: (run) => {
     if (run.mainThreadInFlight.size <= 1) return null
     return `pages ${[...run.mainThreadInFlight].map((index) => index + 1).join(' and ')} convert on the main thread together`
+  },
+}
+
+export const NOTHING_STARTS_AFTER_SETTLE: Property = {
+  name: 'Once schedulePages settles, nothing new starts and the worker pool is destroyed',
+  always: (run) => {
+    if (run.outcome.kind === 'running') return null
+    if (run.workersAliveAtSettle > 0) return `${run.workersAliveAtSettle} workers still alive when schedulePages settled`
+    if (run.startedAfterSettle.length > 0) return `after schedulePages settled: ${run.startedAfterSettle.join(', ')}`
+    return null
   },
 }

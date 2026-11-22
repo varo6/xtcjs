@@ -3,7 +3,7 @@
 import { convertToXtc, type ConversionOptions } from '../../src/lib/converter'
 import { getTargetDimensions } from '../../src/lib/devices'
 
-export type SourceType = 'cbz' | 'pdf' | 'image'
+export type SourceType = 'cbz' | 'cbr' | 'pdf' | 'image'
 export type Pipeline = 'worker' | 'main-thread'
 
 const NativeWorker = window.Worker
