@@ -14,6 +14,7 @@ export interface ConversionOptions {
   orientation: 'landscape' | 'portrait'
   firstPageIsCover: boolean
   coverPortrait: boolean
+  applySplitToCover: boolean
   landscapeFlipClockwise: boolean
   showProgressPreview: boolean
   imageMode: 'cover' | 'letterbox' | 'fill' | 'crop'
