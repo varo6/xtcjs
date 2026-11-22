@@ -46,6 +46,13 @@ async function loadPdfWorker(): Promise<PdfWorkerConstructor> {
   return pdfWorkerPromise
 }
 
+// pdf.js v5 has no disableWorker option. With no workerPort it runs the worker
+// code on this thread only if globalThis.pdfjsWorker is set, which importing
+// the worker module does.
+async function loadMainThreadPdfWorker(): Promise<void> {
+  await import('pdfjs-dist/legacy/build/pdf.worker.min.mjs')
+}
+
 function disablePdfWorker(): void {
   if (sharedWorker) {
     sharedWorker.terminate()
@@ -94,12 +101,13 @@ function isRecoverableWorkerError(error: unknown): boolean {
 export async function loadPdfDocument(data: PdfData) {
   const pdfjsLib = await loadPdfJsModule()
   const useWorker = await ensurePdfWorker(pdfjsLib)
-  const primaryBytes = clonePdfBytes(data)
+  if (!useWorker) {
+    await loadMainThreadPdfWorker()
+  }
 
   try {
     return await pdfjsLib.getDocument({
-      data: primaryBytes,
-      disableWorker: !useWorker,
+      data: clonePdfBytes(data),
       wasmUrl: PDFJS_WASM_URL,
     }).promise
   } catch (error) {
@@ -108,10 +116,10 @@ export async function loadPdfDocument(data: PdfData) {
     }
 
     disablePdfWorker()
+    await loadMainThreadPdfWorker()
 
     return await pdfjsLib.getDocument({
       data: clonePdfBytes(data),
-      disableWorker: true,
       wasmUrl: PDFJS_WASM_URL,
     }).promise
   }
