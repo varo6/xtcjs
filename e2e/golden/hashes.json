@@ -1,0 +1,23 @@
+{
+  "cbz landscape overlap": "b0e2e4bd30ba84cec0408c164d070d0dbd9d61212ec7672fd0274e54c1708535",
+  "cbz landscape split": "06c3bb3b8f826bcf4f7b738212bfd461f789b7ad2911e18a4fbe3238794494a9",
+  "cbz landscape fourway": "c45e83f9f28c307e6919156ab0932dea485cd5523d9ec2cc2b574d734b756387",
+  "cbz landscape nosplit": "c45e83f9f28c307e6919156ab0932dea485cd5523d9ec2cc2b574d734b756387",
+  "cbz splitSpreads off": "c45e83f9f28c307e6919156ab0932dea485cd5523d9ec2cc2b574d734b756387",
+  "cbz pageOverview portrait": "01e15866133faadb9dbbc686932b512d4f1978d3ca7cafb85950f3f45c851873",
+  "cbz pageOverview landscape": "a2662cfb98c93a6097b8ba810ce45316fd8c03d677c2d617848152355dbc6eb6",
+  "cbz portrait orientation": "ce018faf0c22f2b891f73a569391617992cea6d68bbb2c113f5d9b16e2d59ca4",
+  "cbz X3": "69afd93d4264a20998633a0bae5021f4f0a3328d8ac6e1919dffd44459b1dd4b",
+  "cbz 2-bit": "c67e4b89f98c84b81d009cf70a9221b421fc531a889a7633774f8b63177ca43f",
+  "cbz dithering floyd contrast": "e5e18a7fdca3828dbf1d7f189667e6a6ff10ae380b1e38a9ec78b7969a34d201",
+  "cbz chapter (no cover)": "67e5f55fc9769f98095b2f5d71bd2fd85ecf6e198c28a4a1b891eef7dcebde15",
+  "pdf default": "2d423ee34a7c1543e2e6770a894fa2c6622049ffbb04239f82120d0320c51609",
+  "pdf 2-bit atkinson": "2829900bfba39f87fa433d4e91f79f6a326b585140883e16ceefb1521e8b92cc",
+  "pdf coverPortrait off": "1b2a034a14f26551c50889af8bc192055965ec0a8526169d397ee8f5ebba836d",
+  "image portrait cover": "059c7b841fa3bf7a34bb4c5ddca01585fd5a6c7ba362b589981943d03c485b15",
+  "image X3 2-bit": "dc8197f6ed58ace5178394807c2e6361d00428cf5d947376992f6b5d5fd513c6",
+  "cbz portrait pages overlap": "468e199e1e7c96ace806f66af9d6b9a5bc1bdfb297eadfd91de538795b026edf",
+  "cbz portrait pages split": "14755bcf5c3887560c7085542c7aa14d9bd47f1868bc374f9ffa66c74f9ddb1a",
+  "cbz portrait pages fourway": "9e99a0487e52ca8680fea24375f0c5fa9e5aafa090e7c35acebed02e1fc2aa76",
+  "cbz portrait pages nosplit": "b5453eaf453fcfe3a3016508b1efc0dab537060ff03545fa54e3f9eea14ef33c"
+}

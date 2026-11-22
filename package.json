@@ -15,7 +15,8 @@
     "build:static": "VITE_API_URL=https://api.xtcjs.app/api vite build",
     "preview": "vite preview",
     "serve": "bun run server/index.ts",
-    "serve:api": "bun run server/api-only.ts"
+    "serve:api": "bun run server/api-only.ts",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@hono/vite-dev-server": "^0.24.1",
@@ -30,6 +31,7 @@
     "react-dom": "^19.2.7"
   },
   "devDependencies": {
+    "@playwright/test": "1.65.1",
     "@tanstack/router-plugin": "^1.168.18",
     "@types/bun": "latest",
     "@types/react": "^19.2.17",
